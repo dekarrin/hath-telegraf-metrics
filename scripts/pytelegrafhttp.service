@@ -1,0 +1,18 @@
+[Unit]
+Description=Pytelegrafhttp is a scraper for metrics from HTTP pages
+Documentation=https://github.com/dekarrin/pytelegrafhttp/
+After=network-online.target
+
+[Service]
+Type=simple
+User=pytelegrafhttp
+Group=pytelegrafhttp
+ExecStart=/usr/bin/pytelegrafhttp start --config /etc/pytelegrafhttp/config.py
+ExecReload=/usr/bin/pytelegrafhttp reload-config $MAINPID --config /etc/pytelegrafhttp/config.py
+ExecStop=/usr/bin/pytelegrafhttp stop $MAINPID
+Restart=on-failure
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target
+Alias=pytelegrafhttp.service

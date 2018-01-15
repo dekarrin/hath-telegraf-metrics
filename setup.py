@@ -25,6 +25,10 @@ setup(
 	keywords='telegraf metrics http',
 	packages=['pytelegrafhttp'],
 	install_requires=['pytelegraf', 'requests'],
+	python_requires='>=3.3',
+	extras_require={
+		'systemd-logs': ['systemd-python']
+	},
 	entry_points={
 		'console_scripts': [
 			'pytelegrafhttp=pytelegrafhttp:main'
