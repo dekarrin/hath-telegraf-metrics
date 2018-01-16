@@ -43,8 +43,8 @@ def start(config_file: str='config.py'):
 
 		secs_per_tick = int(conf.time_collection_interval)
 		daemon_com.load_config(conf)
-		last_good_tick = clock.start(secs_per_tick).tick
 		scraper.load_config(conf)
+		last_good_tick = clock.start(secs_per_tick).tick
 
 	load_config()
 	daemon_com.signal_started()

@@ -22,7 +22,7 @@ setup(
 		'Programming Language :: Python :: 3 :: Only',
 		'Topic :: System'
 	],
-	keywords='telegraf metrics http',
+	keywords='telegraf metrics http.py',
 	packages=['pytelegrafhttp'],
 	install_requires=['pytelegraf', 'requests'],
 	python_requires='>=3.3',

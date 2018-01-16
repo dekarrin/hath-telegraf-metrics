@@ -64,7 +64,7 @@ class TickClock(object):
 		running slowly.
 		"""
 		self._tick = tick
-		self._time = _now()
+		self._time = now()
 		self._speed = None
 		self._elapsed = None
 		self._prev = None
@@ -101,7 +101,7 @@ class TickClock(object):
 			if sleep_time > 0:
 				_log.debug("Sleep for %0.5f seconds", sleep_time)
 				time.sleep(sleep_time)
-		ts = _now()
+		ts = now()
 		_no_interrupt(lambda: self._increment_clock_props(ts))
 		_log.debug("Clock advanced to tick " + str(self.tick))
 		return self
@@ -328,7 +328,7 @@ class TickClock(object):
 		:type total: ``datetime.timedelta``
 		:return:
 		"""
-		self._time = _now()
+		self._time = now()
 		self._speed = speed
 		if total is not None:
 			self._total = total
@@ -354,7 +354,7 @@ class TickClock(object):
 		return type(TickClock, self).__name__ + "(tick=" + repr(self.tick) + ")"
 
 
-def _now() -> datetime.datetime:
+def now() -> datetime.datetime:
 	"""
 	Gets the current datetime as a timezone-aware UTC datetime instance.
 
@@ -380,3 +380,12 @@ def _datetime_to_ts(utc: datetime.datetime, ms: bool=False) -> int:
 		ts += utc.microsecond / 1000000.0
 		ts *= 1000
 	return int(ts)
+
+
+def now_ts(ms: bool=False) -> int:
+	"""
+	Gets the current datetime as a timestamp representing the number of seconds since the start of the unix epoch.
+	:param ms: Whether to return the timestamp in milliseconds rather than seconds. If false, it is returned in seconds.
+	:return: The timestamp of the current time.
+	"""
+	return _datetime_to_ts(now(), ms=ms)

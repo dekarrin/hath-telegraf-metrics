@@ -2,23 +2,61 @@
 Contains scraper class for system.
 """
 from .clock import TickClock
-from . import util
+from . import util, http
 import base64
 import re
+import time
+import random
+import urllib.parse
+import logging
+from .clock import now_ts
+import pprint
+
+
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.DEBUG)
+
+
+class LoginError(Exception):
+	"""
+	Raised when login could not be completed.
+	"""
+	def __init__(self, msg):
+		"""
+		Creates a new LoginError.
+
+		:param msg: The messages.
+		"""
+		super().__init__(msg)
+
+
+class VerificationError(Exception):
+	"""
+	Raise when a page did not match the expected content.
+	"""
+
+	def __init__(self, msg):
+		"""
+		Creates a new VerificationError.
+
+		:param msg: The messages.
+		"""
+		super().__init__(msg)
 
 
 class PageScraper(object):
 
 	def __init__(self):
+		self._client = http.HttpAgent('localhost', request_payload='form', response_payload='text')
 		self._running = True
-		self._use_ssl = False
-		self._host = None
+		self._agent = False
 		self._user = None
-		self._pass_encodes = None
 		self._password = None
-		self._login_process = None
+		self._login_steps = None
 		self._endpoints = None
 		self._logged_in = False
+		self._login_response = None
+		self._login_form = None
 		super(self).__init__()
 
 	def load_config(self, conf):
@@ -26,22 +64,192 @@ class PageScraper(object):
 		user = conf.scraper_username
 		passwd = conf.scraper_password
 		ssl = conf.scraper_use_ssl
-		login_process = conf.scraper_login_steps
 
-		self._use_ssl = ssl
-		self._host = host
+		self._client.ssl = ssl
+		self._client.host = host
 		self._user = user
 		self._password = base64.b85encode(passwd.encode('utf-8'))
-		self._login_process = parse_config_login_steps(conf.scraper_login_steps, 'scraper_login_steps')
+		self._login_steps = parse_config_login_steps(conf.scraper_login_steps, 'scraper_login_steps')
 		self._endpoints = parse_config_endpoints(conf.scraper_endpoints, 'scraper_endpoints')
 		self._logged_in = False
+		self._client.start_new_session()
 
-	def run_tick(self, clock: TickClock):
+	def run_tick(self, clock):
 		if not self._logged_in:
-			self.login()
+			_log.info("Not logged in; attempting login...")
+			self._login()
+			_log.info("Login successful")
+			return
+		for endpoint_data in self._endpoints:
+			self._scrape_endpoint(endpoint_data)
 
-	def login(self):
-		pass
+
+	def _scrape_endpoint(self, endpoint_data):
+		endpoint = endpoint_data['endpoint']
+		verify_pattern = endpoint_data['verify-pattern']
+		metrics = endpoint_data['metrics']
+
+		ts = now_ts(ms=True)
+
+		endpoint_text = self._client.request('GET', endpoint)
+		if verify_pattern.search(endpoint_text) is None:
+			raise VerificationError("endpoint did not match expected content")
+		idx = 0
+		bursts = []
+		for m in metrics:
+			dest_channel = m['dest']
+			metric_name = m['name']
+			pattern = m['regex']
+			metric_value_definitions = m['values']
+			metric_tag_definitions = m['tags']
+
+			matcher = pattern.search(endpoint_text)
+			if matcher is None:
+				warning_text = "endpoint '" + endpoint + "', metric " + str(idx) + " (" + metric_name + ")"
+				warning_text += " could not be found. Skipping for this unit of time"
+				_log.warning(warning_text)
+				continue
+
+			# build the values from the matched items
+			metric_values = {}
+			for value_name in metric_value_definitions:
+				value_def = metric_value_definitions[value_name]
+				value_group = value_def['capture']
+				value_type = value_def['type']
+				metric_values[value_name] = value_type(matcher.group(value_group))
+
+			metric_tags = {}
+			for tag_name in metric_tag_definitions:
+				tag_def = metric_tag_definitions[tag_name]
+				tag_type = tag_def['type']
+				if tag_type == 'capture':
+					tag_value = matcher.group(tag_def['value'])
+				else:
+					# assume all are const
+					tag_value = tag_def['value']
+				metric_tags[tag_name] = tag_value
+
+			bursts.append((dest_channel, {
+				'metric': metric_name,
+				'values': metric_values,
+				'tags': metric_tags
+			}))
+
+		_log.info("Got metrics for " + endpoint + "; sending...")
+		for b in bursts:
+			self._send_metric_burst(b[0], ts, b[1]['metric'], b[1]['values'], b[1]['tags'])
+
+	def _send_metric_burst(self, channel, timestamp, metric, values, tags):
+		_log.info("TEST: SEND METRICS TO " + channel)
+		pprint.pprint((
+			metric,
+			tags,
+			values,
+			timestamp
+		))
+
+	def _login(self):
+		self._login_response = None
+		self._login_form = None
+		try:
+			for step in self._login_steps:
+				if step['type'] == 'attempt':
+					self._login_attempt_get(step['endpoint'])
+					antiflood_wait()
+				elif step['type'] == 'resp-extract':
+					if step['extract-type'] == 'form-vars':
+						self._login_extract_response_form(step['inject'])
+					else:
+						raise ValueError("Bad login step extract-type: " + step['extract-type'])
+				elif step['type'] == 'submit-form':
+					self._login_submit_form()
+					antiflood_wait()
+				elif step['type'] == 'verify':
+					if not self._login_verify_response(step['pattern']):
+						self._running = False
+						raise LoginError("Verification of login failed! Shut down.")
+					else:
+						self._logged_in = True
+				else:
+					raise ValueError("Bad login step type: " + step['type'])
+		finally:
+			self._login_response = None
+			self._login_form = None
+
+	def _login_verify_response(self, pattern):
+		return pattern.search(self._login_response) is not None
+
+	def _login_attempt_get(self, endpoint):
+		status, self._login_response = self._client.request('GET', endpoint)
+
+	def _login_submit_form(self):
+		if self._login_form['method'] == 'GET':
+			params = self._login_form['variables']
+			payload = None
+		else:
+			params = None
+			payload = self._login_form['variables']
+		meth = self._login_form['method']
+		action = self._login_form['action']
+		if '?' in action:
+			endpoint, qs = action.split('?', 1)
+			query_parts = urllib.parse.parse_qs(qs, keep_blank_values=True)
+			if params is not None:
+				params = {**params, **query_parts}
+			else:
+				params = query_parts
+		else:
+			endpoint = action
+
+		status, self._login_response = self._client.request(meth, endpoint, query=params, payload=payload)
+
+	def _login_extract_response_form(self, injections):
+		# first, find the form element
+		m = re.search(r'<form.*?</form>', self._login_response)
+		if not m:
+			raise LoginError("Could not extract from repsonse; regex failed")
+		form_text = m.group(0)
+		form_open_tag = re.search(r'<form [^>]+>', form_text).group(0)
+		form_action = re.search(r' action="([^"]+)"', form_open_tag).group(1)
+
+		if form_action.startswith('https://'):
+			form_action = form_action[8:]
+		if form_action.startswith('http://'):
+			form_action = form_action[7:]
+		if form_action.startswith(self._client.host):
+			form_action = form_action[len(self._client.host):]
+
+		form_method_m = re.search(r' method="([^"]+)"', form_open_tag)
+		if form_method_m:
+			form_method = form_method_m.group(1).upper()
+		else:
+			form_method = 'GET'
+
+		# only input elements for now
+		inputs = re.findall(r'<input [^>]+>', form_text)
+		form_variables = {}
+		for input_element in inputs:
+			input_name = re.search(r' name="([^"]+)"', input_element).group(1)
+			input_value_m = re.search(r' value="([^"]+)"', input_element)
+			if input_value_m:
+				input_value = input_value_m.group(1)
+			else:
+				input_value = ''
+			if input_name in injections:
+				var_name = injections[input_name]
+				if var_name == 'username':
+					input_value = self._user
+				elif var_name == 'password':
+					input_value = base64.b85decode(self._password).decode('utf-8')
+				else:
+					raise LoginError("Bad variable name in form injections")
+			form_variables[input_name] = input_value
+
+		self._login_form = {
+			'action': form_action,
+			'method': form_method,
+			'variables': form_variables
+		}
 
 	@property
 	def running(self):
@@ -50,14 +258,6 @@ class PageScraper(object):
 	@property
 	def username(self):
 		return self._user
-
-	@property
-	def host(self):
-		return self._host
-
-	@property
-	def is_using_ssl(self):
-		return self._use_ssl
 
 
 def parse_config_login_steps(steps, key_path):
@@ -88,7 +288,15 @@ def parse_config_login_steps(steps, key_path):
 			parsed_step['extract-type'] = t
 
 			if t == 'form-vars':
-				pass  # no additional data
+				parsed_step['inject'] = {}
+				if 'inject' in step_data:
+					for name in step_data['inject']:
+						i_name = str(name)
+						i_value = str(step_data['inject'][i_name])
+						if i_value != 'username' and i_value != 'password':
+							full_key = key + "['inject']['" + i_name + "']"
+							raise util.ConfigException('login step injection vars: not a valid var name: ' + i_value, full_key)
+						parsed_step['inject'][i_name] = i_value
 			else:
 				raise util.ConfigException("unknown subtype for 'resp-extract' login step: '" + t + "'", key + "['type']")
 		elif step_type == 'submit-form':
@@ -227,3 +435,11 @@ def parse_config_metric_tags(tags, key_path):
 				'value': t_value
 			}
 	return parsed_tags
+
+
+def antiflood_wait():
+	"""For multi-request operations, make sure we don't overload the server."""
+	# Numbers in this range are random, however it does seem that 2.5 seconds is a reasonable minimum for avoiding
+	# abuse of the system.
+	secs = random.uniform(2.5, 6.5)
+	time.sleep(secs)
