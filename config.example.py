@@ -57,10 +57,10 @@ scraper_host = 'e-fancomics.org'
 scraper_username = 'username'
 scraper_password = 'password'
 scraper_use_ssl = True
-scraper_login_path = [
+scraper_login_steps = [
 	('attempt', {'endpoint': '/fancomicsathome.php'}),
-	('resp-extract', {'type': 'form-vars', 'capture': {'UserName': 'username', 'PassWord': 'password'}}),
-	('submit-extracted',),
+	('resp-extract', {'type': 'form-vars', 'inject': {'UserName': 'username', 'PassWord': 'password'}}),
+	('submit-form', {}),
 	('verify', {'pattern': 'F@H Miss% shows the percentage of requests'})
 ]
 scraper_endpoints = []
@@ -69,8 +69,8 @@ scraper_endpoints.append({
 	'verify-pattern': 'F@H Miss% shows the percentage of requests',
 	'metrics': [
 		{
-			'dest': 'hath-net',
-			'name': 'hath-net',
+			'dest': 'hath-net',  # destination db / telegraf identifier
+			'name': 'hath-net',  # metrics name
 			'regex': [
 				r'<td>North and South America</td>\s*',
 				r'<td [^>]*>[^ ]+ Gbits/s</td>\s*',

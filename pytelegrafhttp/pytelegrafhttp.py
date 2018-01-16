@@ -5,7 +5,7 @@ import logging
 import logging.handlers
 import re
 import sys
-from . import scrape, daemon, clock as tickclock
+from . import scrape, daemon, clock as tickclock, util
 import os
 
 # all new handlers should go in the module-level logger, so we get the package logger
@@ -44,7 +44,7 @@ def start(config_file: str='config.py'):
 		secs_per_tick = int(conf.time_collection_interval)
 		daemon_com.load_config(conf)
 		last_good_tick = clock.start(secs_per_tick).tick
-		scraper.new_session()
+		scraper.load_config(conf)
 
 	load_config()
 	daemon_com.signal_started()
@@ -104,19 +104,6 @@ def reload(pid: int, config_file: str='config.py'):
 	daemon_com.signal_reload_start(pid)
 	os.kill(pid, signal.SIGHUP)
 	daemon_com.wait_for_reload(pid)
-
-
-class ConfigException(Exception):
-	"""Raised when there is a problem with a value in the configuration."""
-
-	def __init__(self, msg, key):
-		"""
-		:param msg: The detail message.
-		:param key: The key in the config file that there was a problem with. Should be a string that uniquely
-		identifies the key.
-		"""
-		self.key = key
-		super(self).__init__(msg)
 
 
 def _handle_signal(signal_name):
@@ -188,5 +175,5 @@ def _setup_systemd_logger():
 	try:
 		from systemd.journal import JournalHandler
 	except ImportError:
-		raise ConfigException("OS log for systemd not supported; module not installed", 'log_os_logs')
+		raise util.ConfigException("OS log for systemd not supported; module not installed", 'log_os_logs')
 	return JournalHandler()
