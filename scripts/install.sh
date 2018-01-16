@@ -41,6 +41,14 @@ then
 	chmod 774 "$install_dir/logs" || { echo "Could not set mode of logs directory" >&2; exit ${E_ETC};}
 fi
 
+# create daemon directory
+if ! [ -d "$install_dir/daemon" ]
+then
+	mkdir "$install_dir/daemon" || { echo "Could not create daemon directory" >&2; exit ${E_ETC};}
+	chown pytelegrafhttp:pytelegrafhttp "$install_dir/daemon" || { echo "Could not set owner of daemon directory" >&2; exit ${E_ETC};}
+	chmod 770 "$install_dir/daemon" || { echo "Could not set mode of daemon directory" >&2; exit ${E_ETC};}
+fi
+
 # create initial config
 cp config.example.py "$install_dir/config.py" || { echo "Could not create main config" >&2; exit ${E_ETC};}
 # attempt to add systemd logging

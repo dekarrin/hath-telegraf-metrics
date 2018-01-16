@@ -4,7 +4,8 @@ Main controls for starting/stopping the agent.
 import logging
 import logging.handlers
 import re
-from .scrape import PageScraper
+import sys
+from . import scrape, daemon, clock as tickclock
 import os
 
 # all new handlers should go in the module-level logger, so we get the package logger
@@ -12,33 +13,97 @@ _log = logging.getLogger('pytelegrafhttp')
 
 
 def start(config_file: str='config.py'):
+	os_logs = []
+	conf = None
+	main_log = None
+	err_log = None
+	secs_per_tick = None
+	daemon_com = daemon.DaemonCommunicator()
+	scraper = scrape.PageScraper()
+	last_good_tick = 0
+	clock = tickclock.TickClock()
+
+	def load_config():
+		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
+		conf = _config_from_path(config_file)
+		main_log = conf.log_main_log_path
+		err_log = conf.log_error_log_path
+		max_num = int(conf.log_file_keep_count)
+		size = _size_to_bytes(conf.log_file_max_size)
+		main_log, err_log = _setup_file_loggers(main_log, err_log, size, max_num)
+		_log.addHandler(main_log)
+		_log.addHandler(err_log)
+
+		os_log_modes = conf.log_os_logs
+		os_logs = []
+		if 'systemd' in os_log_modes:
+			os_log = _setup_systemd_logger()
+			os_logs.append(os_log)
+			_log.addHandler(os_log)
+
+		secs_per_tick = int(conf.time_collection_interval)
+		daemon_com.load_config(conf)
+		last_good_tick = clock.start(secs_per_tick).tick
+		scraper.new_session()
+
+	load_config()
+	daemon_com.signal_started()
+
+	def reload_scraper_config():
+		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
+		_log.removeHandler(err_log)
+		_log.removeHandler(main_log)
+		for ol in os_logs:
+			_log.removeHandler(ol)
+		conf = _config_from_path(config_file)
+		clock.stop()
+		clock.reset()
+
+		load_config()
+		daemon_com.signal_reload_completed()
+
+	_setup_traps(reload_scraper_config)
+
+	# main loop
+	try:
+		while scraper.running:
+			# noinspection PyBroadException
+			try:
+				scraper.run_tick(clock)
+				last_good_tick = clock.tick
+			except Exception:
+				_log.exception("Problem in tick " + str(clock.tick))
+				_log.error("Last good tick: " + str(last_good_tick))
+			clock.advance()
+		_log.info("Exchange client has no more ticks")
+	except KeyboardInterrupt:
+		_log.info("Interrupted by user")
+	except SystemExit:
+		_log.info("System exited")
+	finally:
+		daemon_com.signal_terminated()
+		_log.info("Clean shutdown")
+
+	_log.info("System exit")
+
+
+def stop(pid: int, config_file: str='config.py'):
+	import signal
 	conf = _config_from_path(config_file)
-	out_log = conf.log_main_log_path
-	err_log = conf.log_error_log_path
-	max_num = int(conf.log_file_keep_count)
-	size = _size_to_bytes(conf.log_file_max_size)
-	_setup_file_loggers(out_log, err_log, size, max_num)
-
-	os_log_modes = conf.log_os_logs
-	if 'systemd' in os_log_modes:
-		_setup_systemd_logger()
-
-	_setup_traps()
-
-	run_dir = conf.execution_dir
-
-	scraper = PageScraper()
-
-
-
-
-
-def stop(pid: int):
-	pass
+	daemon_com = daemon.DaemonCommunicator()
+	daemon_com.load_config(conf)
+	os.kill(pid, signal.SIGTERM)
+	daemon_com.wait_for_termination(pid)
 
 
 def reload(pid: int, config_file: str='config.py'):
-	pass
+	import signal
+	conf = _config_from_path(config_file)
+	daemon_com = daemon.DaemonCommunicator()
+	daemon_com.load_config(conf)
+	daemon_com.signal_reload_start(pid)
+	os.kill(pid, signal.SIGHUP)
+	daemon_com.wait_for_reload(pid)
 
 
 class ConfigException(Exception):
@@ -59,13 +124,13 @@ def _handle_signal(signal_name):
 	sys.exit(0)
 
 
-def _setup_traps():
+def _setup_traps(sighup_closure):
 	import signal
 	import os
-	signal.signal(signal.SIGTERM, lambda x, y: _handle_sigterm())
+	signal.signal(signal.SIGTERM, lambda x, y: _handle_signal("SIGTERM"))
 	if os.name != 'nt':
 		# Windows does not allow these signals, but other systems do
-		signal.signal(signal.SIGHUP, lambda x, y: _handle_sighup())
+		signal.signal(signal.SIGHUP, lambda x, y: sighup_closure)
 	else:
 		# This handler will exist on windows, so don't show warnings
 		# noinspection PyUnresolvedReferences
@@ -84,12 +149,11 @@ def _setup_file_loggers(out_log, err_log, size, max_num):
 	main_file_handler = logging.handlers.RotatingFileHandler(filename=out_log, maxBytes=size, backupCount=max_num)
 	main_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)-22s: [%(levelname)-10s] %(message)s"))
 	main_file_handler.setLevel(logging.DEBUG)
-	_log.addHandler(main_file_handler)
 
 	err_file_handler = logging.handlers.RotatingFileHandler(filename=err_log, maxBytes=size, backupCount=max_num)
 	err_file_handler.setFormatter(logging.Formatter(fmt="%(asctime)-22s: [%(levelname)-10s] %(message)s"))
 	err_file_handler.setLevel(logging.WARNING)
-	_log.addHandler(err_file_handler)
+	return main_file_handler, err_file_handler
 
 
 def _size_to_bytes(size):
@@ -125,4 +189,4 @@ def _setup_systemd_logger():
 		from systemd.journal import JournalHandler
 	except ImportError:
 		raise ConfigException("OS log for systemd not supported; module not installed", 'log_os_logs')
-	_log.addHandler(JournalHandler())
+	return JournalHandler()

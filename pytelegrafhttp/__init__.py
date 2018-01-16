@@ -15,6 +15,8 @@ def main():
 		_parse_cli_and_run()
 	except Exception:
 		_log.exception("Problem during execution")
+		sys.exit(1)
+	sys.exit(0)
 
 
 def _parse_cli_and_run():
@@ -35,7 +37,8 @@ def _parse_cli_and_run():
 	stop_parser = subparsers.add_parser('stop', help='Stop a metrics scraper.', description=stop_desc)
 	""":type : argparse.ArgumentParser"""
 	stop_parser.add_argument('PID', type=int, help='PID of scraper to stop.')
-	stop_parser.set_defaults(func=lambda ns: stop(ns.pid))
+	stop_parser.add_argument('--config', help="Use the specified config file.", default='config.py')
+	stop_parser.set_defaults(func=lambda ns: stop(ns.pid, ns.config))
 
 	# RELOAD
 	rel_desc = "Signals to a running metrics scraper to reload its configuration, and waits for it to complete."
