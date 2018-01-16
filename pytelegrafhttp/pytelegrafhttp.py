@@ -158,11 +158,11 @@ def _size_to_bytes(size):
 	"""
 	units = 'KMGTPEZY'  # note that position of letter is same as power - 1
 	match = re.search(r'^\s*([-+]?\s*[0-9]*\.?[0-9]*)\s*([' + units + r']?\s*B?\s*S?)\s*', size, re.IGNORECASE)
-	if match is None:
+	if match is None or match.group(1) == '':
 		raise ValueError("size string not in proper format 'number [kmgtpezy]': " + size)
 	mem_size = float(re.sub(r'\s*', '', match.group(1)))
 	unit = re.sub(r'\s*', '', match.group(2)).upper()
-	unit = re.sub(r'[BS]$', '', unit)  # remove trailing units symbol
+	unit = re.sub(r'B?S?$', '', unit)  # remove trailing units symbol
 	if unit == '':
 		unit_pow = 0
 	else:
