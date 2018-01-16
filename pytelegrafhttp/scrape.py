@@ -360,8 +360,8 @@ def parse_config_metric_values(values, key_path):
 			parsed_v['type'] = v['type']
 		except KeyError:
 			raise util.ConfigException("metric value must contain 'type'", key)
-		if type(parsed_v['type']) is not type and type(parsed_v['type']) is not function:
-			raise util.ConfigException("metric value conversion type be a type or a lambda", key + "['type']")
+		if type(parsed_v['type']) is not type and not callable(parsed_v['type']):
+			raise util.ConfigException("metric value conversion type be a type or a callable", key + "['type']")
 
 		try:
 			parsed_v['capture'] = int(v['capture'])
