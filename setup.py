@@ -15,7 +15,7 @@ setup(
 	url='https://github.com/dekarrin/pytelegrafhttp',
 	author='Rebecca C. Nelson',
 	classifiers=[
-		'Development Status :: 1 - Planning',
+		'Development Status :: 3 - Alpha',
 		'Environment :: Console',
 		'Intended Audience :: Developers',
 		'License :: OSI Approved :: MIT License',
@@ -31,7 +31,7 @@ setup(
 	},
 	entry_points={
 		'console_scripts': [
-			'pytelegrafhttp=pytelegrafhttp:main'
+			'pytelhttp=pytelegrafhttp:main'
 		]
 	}
 )

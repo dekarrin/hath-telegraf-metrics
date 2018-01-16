@@ -20,10 +20,13 @@ def main():
 
 
 def _parse_cli_and_run():
+	import sys
+	print(sys.argv)
 	parser = argparse.ArgumentParser(description="Get metrics by scraping HTTP sites.")
 
 	# space at the end of metavar is not a typo; we need it so help output is prettier
-	subparsers = parser.add_subparsers(description="Functionality to execute.", metavar=" SUBCOMMAND ")
+	subparsers = parser.add_subparsers(description="Functionality to execute.", metavar=" SUBCOMMAND ", dest='cmd')
+	subparsers.required = True
 
 	# START
 	start_desc = "Start execution of scraper."
