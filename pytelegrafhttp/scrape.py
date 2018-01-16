@@ -57,7 +57,7 @@ class PageScraper(object):
 		self._logged_in = False
 		self._login_response = None
 		self._login_form = None
-		super(self).__init__()
+		super().__init__()
 
 	def load_config(self, conf):
 		host = conf.scraper_host
