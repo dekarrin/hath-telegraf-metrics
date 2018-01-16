@@ -181,6 +181,7 @@ class PageScraper(object):
 
 	def _login_attempt_get(self, endpoint):
 		status, self._login_response = self._client.request('GET', endpoint)
+		_log.info(self._login_response)
 
 	def _login_submit_form(self):
 		if self._login_form['method'] == 'GET':
@@ -207,7 +208,7 @@ class PageScraper(object):
 		# first, find the form element
 		m = re.search(r'<form.*?</form>', self._login_response)
 		if not m:
-			raise LoginError("Could not extract from repsonse; regex failed")
+			raise LoginError("Could not extract form response; regex failed")
 		form_text = m.group(0)
 		form_open_tag = re.search(r'<form [^>]+>', form_text).group(0)
 		form_action = re.search(r' action="([^"]+)"', form_open_tag).group(1)
