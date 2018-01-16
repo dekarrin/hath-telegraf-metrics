@@ -97,7 +97,7 @@ class TickClock(object):
 		if self._limiter_enabled:
 			target_time = self._prev_target_time + self.speed
 			self._prev_target_time = target_time
-			sleep_time = max((target_time - _now()).total_seconds(), 0.0)
+			sleep_time = max((target_time - now()).total_seconds(), 0.0)
 			if sleep_time > 0:
 				_log.debug("Sleep for %0.5f seconds", sleep_time)
 				time.sleep(sleep_time)
