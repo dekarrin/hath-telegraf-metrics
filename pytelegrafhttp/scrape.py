@@ -182,7 +182,6 @@ class PageScraper(object):
 
 	def _login_attempt_get(self, endpoint):
 		status, self._login_response = self._client.request('GET', endpoint)
-		_log.info(self._login_response)
 
 	def _login_submit_form(self):
 		if self._login_form['method'] == 'GET':
