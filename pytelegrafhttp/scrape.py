@@ -58,6 +58,7 @@ class PageScraper(object):
 		self._logged_in = False
 		self._login_response = None
 		self._login_form = None
+		self._cookies_file = None
 		super().__init__()
 
 	def load_config(self, conf):
@@ -73,17 +74,34 @@ class PageScraper(object):
 		self._login_steps = parse_config_login_steps(conf.scraper_login_steps, 'scraper_login_steps')
 		self._endpoints = parse_config_endpoints(conf.scraper_endpoints, 'scraper_endpoints')
 		self._logged_in = False
+		self._cookies_file = conf.env_cookies_file
 		self._client.start_new_session()
+
+	def setup(self):
+		"""
+		Restore any necessary state.
+		"""
+		try:
+			self._client.load_cookies(self._cookies_file)
+		except FileNotFoundError:
+			_log.info("Attempting initial login...")
+			self._login()
+			_log.info("Login successful")
 
 	def run_tick(self, clock):
 		if not self._logged_in:
-			_log.info("Not logged in; attempting login...")
+			_log.warning("Not logged in; attempting login...")
 			self._login()
 			_log.info("Login successful")
 			return
 		for endpoint_data in self._endpoints:
 			self._scrape_endpoint(endpoint_data)
 
+	def cleanup(self):
+		"""
+		Prepare for shutdown.
+		"""
+		self._client.save_cookies(self._cookies_file)
 
 	def _scrape_endpoint(self, endpoint_data):
 		endpoint = endpoint_data['endpoint']
@@ -168,7 +186,7 @@ class PageScraper(object):
 				elif step['type'] == 'verify':
 					if not self._login_verify_response(step['pattern']):
 						self._running = False
-						raise LoginError("Verification of login failed! Shut down.")
+						raise LoginError("Verification of login failed!")
 					else:
 						self._logged_in = True
 				elif step['type'] == 'bounce-transfer':

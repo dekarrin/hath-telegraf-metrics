@@ -17,11 +17,12 @@ def start(config_file: str='config.py'):
 	conf = None
 	main_log = None
 	err_log = None
-	secs_per_tick = None
+	secs_per_tick = 0.0
 	daemon_com = daemon.DaemonCommunicator()
 	scraper = scrape.PageScraper()
 	last_good_tick = 0
 	clock = tickclock.TickClock()
+	cookies_file = None
 
 	def load_config():
 		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
@@ -44,10 +45,11 @@ def start(config_file: str='config.py'):
 		secs_per_tick = int(conf.time_collection_interval)
 		daemon_com.load_config(conf)
 		scraper.load_config(conf)
-		last_good_tick = clock.start(secs_per_tick).tick
+		last_good_tick = clock.start(secs_per_tick).tick  # must be here because this function is called via signal
 
 	load_config()
 	daemon_com.signal_started()
+	scraper.setup()
 
 	def reload_scraper_config():
 		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
@@ -64,6 +66,7 @@ def start(config_file: str='config.py'):
 
 	_setup_traps(reload_scraper_config)
 
+	last_good_tick = clock.stop().reset().start(secs_per_tick).tick
 	# main loop
 	try:
 		while scraper.running:
@@ -71,6 +74,8 @@ def start(config_file: str='config.py'):
 			try:
 				scraper.run_tick(clock)
 				last_good_tick = clock.tick
+			except scrape.LoginError:
+				_log.error("Login failed; cannot continue")
 			except Exception:
 				_log.exception("Problem in tick " + str(clock.tick))
 				_log.error("Last good tick: " + str(last_good_tick))
@@ -81,6 +86,7 @@ def start(config_file: str='config.py'):
 	except SystemExit:
 		_log.info("System exited")
 	finally:
+		scraper.cleanup()
 		daemon_com.signal_terminated()
 		_log.info("Clean shutdown")
 

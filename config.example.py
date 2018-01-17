@@ -9,6 +9,9 @@ install_dir = '/etc/pytelegrafhttp'
 # Directory for files for use with daemon communication
 env_daemon_files_dir = install_dir + '/daemon'
 
+# file to save cookies in
+env_cookies_file = install_dir + '/cookies'
+
 
 ########
 # TIME #

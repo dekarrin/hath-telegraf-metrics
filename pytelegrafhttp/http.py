@@ -3,6 +3,7 @@ Functions for working with HTTP and connections.
 """
 
 import requests
+import pickle
 import concurrent.futures
 import logging
 import time
@@ -290,6 +291,35 @@ class HttpAgent(object):
 			else:
 				raise ValueError("Bad response_payload encoding: " + decode_payload)
 		return resp.status_code, resp_data
+
+	def save_cookies(self, filename):
+		"""
+		Save the cookies in the current session to disk for later retrieval. Can be used to keep logins open across
+		launches.
+
+		:param filename: The file to save the cookies to.
+		"""
+		if self._session is None:
+			self.start_new_session()
+
+		cookies = self._session.cookies
+
+		with open(filename, 'w') as f:
+			pickle.dump(cookies, f)
+
+	def load_cookies(self, filename):
+		"""
+		Loads the given cookies into the current session. Will replace any current cookies.
+
+		:param filename: The file to load the cookies from.
+		"""
+		if self._session is None:
+			self.start_new_session()
+
+		with open(filename, 'r') as f:
+			cookies = pickle.load(f)
+
+		self._session.cookies.update(cookies)
 
 	@property
 	def ssl(self):
