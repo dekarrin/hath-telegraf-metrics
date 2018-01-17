@@ -11,6 +11,7 @@ import urllib.parse
 import logging
 from .clock import now_ts
 import pprint
+import html
 
 
 _log = logging.getLogger(__name__)
@@ -219,6 +220,7 @@ class PageScraper(object):
 			form_action = form_action[7:]
 		if form_action.startswith(self._client.host):
 			form_action = form_action[len(self._client.host):]
+		form_action = html.unescape(form_action)
 
 		form_method_m = re.search(r' method="([^"]+)"', form_open_tag, re.DOTALL)
 		if form_method_m:
