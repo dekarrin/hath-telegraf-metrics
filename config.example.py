@@ -61,6 +61,7 @@ scraper_login_steps = [
 	('attempt', {'endpoint': '/fancomicsathome.php'}),
 	('resp-extract', {'type': 'form-vars', 'inject': {'UserName': 'username', 'PassWord': 'password'}}),
 	('submit-form', {}),
+	('bounce-transfer', {'pattern': '<a href="([^"]+)">Or click here if you do not wish to wait</a>'}),
 	('verify', {'pattern': 'F@H Miss% shows the percentage of requests'})
 ]
 scraper_endpoints = []

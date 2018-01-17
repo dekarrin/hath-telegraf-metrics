@@ -171,13 +171,29 @@ class PageScraper(object):
 						raise LoginError("Verification of login failed! Shut down.")
 					else:
 						self._logged_in = True
+				elif step['type'] == 'bounce-transfer':
+					self._login_bounce_transfer(step['pattern'])
+					antiflood_wait()
 				else:
 					raise ValueError("Bad login step type: " + step['type'])
 		finally:
 			self._login_response = None
 			self._login_form = None
 
+	def _login_bounce_transfer(self, pattern):
+		m = pattern.search(self._login_response, re.DOTALL)
+		if m is None:
+			raise LoginError("Could not bounce from login response; regex failed")
+		next_link = self._parse_link(m.group(1))
+
+		uri = next_link['uri']
+		host = next_link['host']
+		params = next_link['query']
+
+		status, self._login_response = self._client.request('GET', uri, host=host, query=params)
+
 	def _login_verify_response(self, pattern):
+		_log.info(self._login_response)
 		return pattern.search(self._login_response, re.DOTALL) is not None
 
 	def _login_attempt_get(self, endpoint):
@@ -246,6 +262,9 @@ class PageScraper(object):
 		}
 
 	def _parse_link(self, link):
+		"""
+		:rtype: dict
+		"""
 		link = html.unescape(link)
 		components = {
 			'host': None,
@@ -253,7 +272,7 @@ class PageScraper(object):
 			'query': None
 		}
 		res = urllib.parse.urlparse(link)
-		
+
 		if res.netloc is not '' and res.netloc != self._client.host:
 			components['host'] = res.netloc
 
@@ -312,6 +331,15 @@ def parse_config_login_steps(steps, key_path):
 						parsed_step['inject'][i_name] = i_value
 			else:
 				raise util.ConfigException("unknown subtype for 'resp-extract' login step: '" + t + "'", key + "['type']")
+		elif step_type == 'bounce-transfer':
+			try:
+				parsed_step['pattern'] = re.compile(str(step_data['pattern']), re.DOTALL)
+			except KeyError:
+				raise util.ConfigException("'bounce-transfer' login step data must include 'pattern'", key)
+			except re.error as e:
+				msg = "'buonce-transfer' login step does not contain compilable regex; " + str(e)
+				raise util.ConfigException(msg, key + "['pattern']")
+
 		elif step_type == 'submit-form':
 			pass  # no additional data
 		elif step_type == 'verify':
