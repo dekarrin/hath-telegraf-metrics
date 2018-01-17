@@ -177,7 +177,7 @@ class PageScraper(object):
 			self._login_form = None
 
 	def _login_verify_response(self, pattern):
-		return pattern.search(self._login_response) is not None
+		return pattern.search(self._login_response, re.DOTALL) is not None
 
 	def _login_attempt_get(self, endpoint):
 		status, self._login_response = self._client.request('GET', endpoint)
@@ -206,12 +206,12 @@ class PageScraper(object):
 
 	def _login_extract_response_form(self, injections):
 		# first, find the form element
-		m = re.search(r'<form.*?</form>', self._login_response)
+		m = re.search(r'<form.*?</form>', self._login_response, re.DOTALL)
 		if not m:
 			raise LoginError("Could not extract form response; regex failed")
 		form_text = m.group(0)
-		form_open_tag = re.search(r'<form [^>]+>', form_text).group(0)
-		form_action = re.search(r' action="([^"]+)"', form_open_tag).group(1)
+		form_open_tag = re.search(r'<form [^>]+>', form_text, re.DOTALL).group(0)
+		form_action = re.search(r' action="([^"]+)"', form_open_tag, re.DOTALL).group(1)
 
 		if form_action.startswith('https://'):
 			form_action = form_action[8:]
@@ -220,18 +220,18 @@ class PageScraper(object):
 		if form_action.startswith(self._client.host):
 			form_action = form_action[len(self._client.host):]
 
-		form_method_m = re.search(r' method="([^"]+)"', form_open_tag)
+		form_method_m = re.search(r' method="([^"]+)"', form_open_tag, re.DOTALL)
 		if form_method_m:
 			form_method = form_method_m.group(1).upper()
 		else:
 			form_method = 'GET'
 
 		# only input elements for now
-		inputs = re.findall(r'<input [^>]+>', form_text)
+		inputs = re.findall(r'<input [^>]+>', form_text, re.DOTALL)
 		form_variables = {}
 		for input_element in inputs:
-			input_name = re.search(r' name="([^"]+)"', input_element).group(1)
-			input_value_m = re.search(r' value="([^"]+)"', input_element)
+			input_name = re.search(r' name="([^"]+)"', input_element, re.DOTALL).group(1)
+			input_value_m = re.search(r' value="([^"]+)"', input_element, re.DOTALL)
 			if input_value_m:
 				input_value = input_value_m.group(1)
 			else:
