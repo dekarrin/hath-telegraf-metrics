@@ -370,14 +370,6 @@ class HttpAgent(object):
 		self._ignored_http_errors = list(value)
 
 	def _prepare_http_request(self, method, uri, host, query, payload, auth, encode_payload, use_ssl):
-		print(method)
-		print(uri)
-		print(host)
-		print(query)
-		print(payload)
-		print(auth)
-		print(encode_payload)
-		print(use_ssl)
 
 		if use_ssl:
 			scheme = 'https://'

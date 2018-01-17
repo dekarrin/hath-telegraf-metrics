@@ -253,6 +253,7 @@ class PageScraper(object):
 			'query': None
 		}
 		res = urllib.parse.urlparse(link)
+		pprint.pprint(res)
 		if res.netloc is not '' and res.netloc != self._client.host:
 			components['host'] = res.netloc
 
