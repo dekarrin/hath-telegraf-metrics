@@ -193,7 +193,7 @@ class PageScraper(object):
 		meth = self._login_form['method']
 		action = self._login_form['action']
 		uri = action['uri']
-		host = action['uri']
+		host = action['host']
 		if action['query'] is not None:
 			if params is not None:
 				params = {**params, **action['query']}
@@ -253,7 +253,7 @@ class PageScraper(object):
 			'query': None
 		}
 		res = urllib.parse.urlparse(link)
-		pprint.pprint(res)
+		
 		if res.netloc is not '' and res.netloc != self._client.host:
 			components['host'] = res.netloc
 
