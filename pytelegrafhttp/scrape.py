@@ -193,17 +193,15 @@ class PageScraper(object):
 			payload = self._login_form['variables']
 		meth = self._login_form['method']
 		action = self._login_form['action']
-		if '?' in action:
-			endpoint, qs = action.split('?', 1)
-			query_parts = urllib.parse.parse_qs(qs, keep_blank_values=True)
+		uri = action['uri']
+		host = action['uri']
+		if action['query'] is not None:
 			if params is not None:
-				params = {**params, **query_parts}
+				params = {**params, **action['query']}
 			else:
-				params = query_parts
-		else:
-			endpoint = action
+				params = action['query']
 
-		status, self._login_response = self._client.request(meth, endpoint, query=params, payload=payload)
+		status, self._login_response = self._client.request(meth, uri, host=host, query=params, payload=payload)
 
 	def _login_extract_response_form(self, injections):
 		# first, find the form element
@@ -214,13 +212,7 @@ class PageScraper(object):
 		form_open_tag = re.search(r'<form [^>]+>', form_text, re.DOTALL).group(0)
 		form_action = re.search(r' action="([^"]+)"', form_open_tag, re.DOTALL).group(1)
 
-		if form_action.startswith('https://'):
-			form_action = form_action[8:]
-		if form_action.startswith('http://'):
-			form_action = form_action[7:]
-		if form_action.startswith(self._client.host):
-			form_action = form_action[len(self._client.host):]
-		form_action = html.unescape(form_action)
+		form_action = self._parse_link(form_action)
 
 		form_method_m = re.search(r' method="([^"]+)"', form_open_tag, re.DOTALL)
 		if form_method_m:
@@ -253,6 +245,24 @@ class PageScraper(object):
 			'method': form_method,
 			'variables': form_variables
 		}
+
+	def _parse_link(self, link):
+		link = html.unescape(link)
+		components = {
+			'host': None,
+			'uri': None,
+			'query': None
+		}
+		res = urllib.parse.urlparse(link)
+		if res.netloc is not '' and res.netloc != self._client.host:
+			components['host'] = res.netloc
+
+		components['uri'] = res.path
+
+		if res.query is not '':
+			components['query'] = urllib.parse.parse_qs(res.query, keep_blank_values=True)
+
+		return components
 
 	@property
 	def running(self):
