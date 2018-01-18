@@ -87,7 +87,7 @@ scraper_endpoints.append({
 			'name': 'hath-net',  # metrics name
 			'regex': [
 				r'<td>North and South America</td>\s*',
-				r'<td [^>]*>[^ ]+ Gbits/s</td>\s*',
+				r'<td [^>]*>[^ ]+ Gbit/s</td>\s*',
 				r'<td [^>]*>=</td>\s*',
 				r'<td [^>]*>([^ ]+) MB/s</td>\s*',
 				r'<td [^>]*>([^ ]+) %</td>\s*',
@@ -109,7 +109,7 @@ scraper_endpoints.append({
 			'name': 'hath-net',
 			'regex': [
 				r'<td>Europe and South America</td>\s*',
-				r'<td [^>]*>[^ ]+ Gbits/s</td>\s*',
+				r'<td [^>]*>[^ ]+ Gbit/s</td>\s*',
 				r'<td [^>]*>=</td>\s*',
 				r'<td [^>]*>([^ ]+) MB/s</td>\s*',
 				r'<td [^>]*>([^ ]+) %</td>\s*',
@@ -131,7 +131,7 @@ scraper_endpoints.append({
 			'name': 'hath-net',
 			'regex': [
 				r'<td>Asia and Oceania</td>\s*',
-				r'<td [^>]*>[^ ]+ Gbits/s</td>\s*',
+				r'<td [^>]*>[^ ]+ Gbit/s</td>\s*',
 				r'<td [^>]*>=</td>\s*',
 				r'<td [^>]*>([^ ]+) MB/s</td>\s*',
 				r'<td [^>]*>([^ ]+) %</td>\s*',
@@ -153,7 +153,7 @@ scraper_endpoints.append({
 			'name': 'hath-net',
 			'regex': [
 				r'<td>Global</td>\s*',
-				r'<td [^>]*>[^ ]+ Gbits/s</td>\s*',
+				r'<td [^>]*>[^ ]+ Gbit/s</td>\s*',
 				r'<td [^>]*>=</td>\s*',
 				r'<td [^>]*>([^ ]+) MB/s</td>\s*',
 				r'<td [^>]*>([^ ]+) %</td>\s*',
@@ -175,7 +175,7 @@ scraper_endpoints.append({
 			'name': 'hath-health',
 			'regex': [
 				r'<tr>\s*',
-				r'<td><a [^>]*>([^<]+)</td>\s*',
+				r'<td><a [^>]*>([^<]+)</a></td>\s*',
 				r'<td>([^<]+)</td>\s*',
 				r'<td [^>]*>([^<]+)</td>\s*',
 				r'<td>[^<]*</td>\s*',
