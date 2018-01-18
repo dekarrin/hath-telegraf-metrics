@@ -115,7 +115,7 @@ class PageScraper(object):
 
 		ts = now_ts(ms=True)
 
-		endpoint_text = self._client.request('GET', endpoint)
+		status, endpoint_text = self._client.request('GET', endpoint)
 		if verify_pattern.search(endpoint_text) is None:
 			raise VerificationError("endpoint did not match expected content")
 		idx = 0
