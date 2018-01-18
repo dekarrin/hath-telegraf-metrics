@@ -45,16 +45,6 @@ def start(config_file: str='config.py'):
 		scraper.load_config(conf)
 		last_good_tick = clock.start(secs_per_tick).tick  # must be here because this function is called via signal
 
-	load_config()
-	daemon_com.signal_started()
-	try:
-		scraper.setup()
-	except KeyboardInterrupt:
-		_log.info("Interrupted by user")
-		daemon_com.signal_terminated()
-		_log.info("Clean shutdown")
-		sys.exit(0)
-
 	def reload_scraper_config():
 		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
 		_log.removeHandler(err_log)
@@ -68,11 +58,14 @@ def start(config_file: str='config.py'):
 		load_config()
 		daemon_com.signal_reload_completed()
 
+	load_config()
+	daemon_com.signal_started()
 	_setup_traps(reload_scraper_config)
 
-	last_good_tick = clock.stop().reset().start(secs_per_tick).tick
 	# main loop
 	try:
+		scraper.setup()
+		last_good_tick = clock.stop().reset().start(secs_per_tick).tick
 		while scraper.running:
 			# noinspection PyBroadException
 			try:
