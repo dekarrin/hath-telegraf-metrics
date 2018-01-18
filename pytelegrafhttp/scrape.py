@@ -61,6 +61,7 @@ class PageScraper(object):
 		self._login_form = None
 		self._cookies_file = None
 		self._state_file = None
+		self._setup_complete = False
 		self._save_frequency = 0
 		super().__init__()
 
@@ -92,6 +93,7 @@ class PageScraper(object):
 			_log.info("Attempting initial login...")
 			self._login()
 			_log.info("Login successful")
+		self._setup_complete = True
 
 	def run_tick(self, clock):
 		"""
@@ -113,7 +115,8 @@ class PageScraper(object):
 		"""
 		Prepare for shutdown.
 		"""
-		self._save_state()
+		if self._setup_complete:
+			self._save_state()
 
 	def _scrape_endpoint(self, endpoint_data):
 		endpoint = endpoint_data['endpoint']
