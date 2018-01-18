@@ -304,7 +304,10 @@ class HttpAgent(object):
 
 		cookies = self._session.cookies
 
-		with open(filename, 'w') as f:
+		_log.debug('writing out cookies...')
+		_log.debug(repr(cookies))
+
+		with open(filename, 'wb') as f:
 			pickle.dump(cookies, f)
 
 	def load_cookies(self, filename):
@@ -316,7 +319,7 @@ class HttpAgent(object):
 		if self._session is None:
 			self.start_new_session()
 
-		with open(filename, 'r') as f:
+		with open(filename, 'rb') as f:
 			cookies = pickle.load(f)
 
 		self._session.cookies.update(cookies)
@@ -428,7 +431,7 @@ class HttpAgent(object):
 		# session object will not attach cookies to a prepared request. Do it manually here.
 		if self._session is not None:
 			req.cookies = self._session.cookies
-		
+
 		if auth:
 			prepared = self._auth_func(req)
 		else:
