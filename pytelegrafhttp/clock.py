@@ -135,7 +135,9 @@ class TickClock(object):
 		return self
 
 	def reset(self):
+		""":rtype: TickClock"""
 		self._tick = 0
+		return self
 
 	def start(self, tick_speed):
 		"""
