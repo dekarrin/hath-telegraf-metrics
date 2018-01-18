@@ -81,9 +81,14 @@ class PageScraper(object):
 		"""
 		Restore any necessary state.
 		"""
+		loaded = False
 		try:
 			self._client.load_cookies(self._cookies_file)
+			loaded = True
 		except FileNotFoundError:
+			_log.info("No cookies file found. Not loading cookies.")
+
+		if not loaded:
 			_log.info("Attempting initial login...")
 			self._login()
 			_log.info("Login successful")

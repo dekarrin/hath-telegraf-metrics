@@ -424,6 +424,11 @@ class HttpAgent(object):
 		headers = _default_http_headers
 		full_url = scheme + host + uri
 		req = requests.Request(method, full_url, data=form_payload, json=json_payload, params=query, headers=headers)
+
+		# session object will not attach cookies to a prepared request. Do it manually here.
+		if self._session is not None:
+			req.cookies = self._session.cookies
+		
 		if auth:
 			prepared = self._auth_func(req)
 		else:
