@@ -20,9 +20,7 @@ def start(config_file: str='config.py'):
 	secs_per_tick = 0.0
 	daemon_com = daemon.DaemonCommunicator()
 	scraper = scrape.PageScraper()
-	last_good_tick = 0
 	clock = tickclock.TickClock()
-	cookies_file = None
 
 	def load_config():
 		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
@@ -49,7 +47,13 @@ def start(config_file: str='config.py'):
 
 	load_config()
 	daemon_com.signal_started()
-	scraper.setup()
+	try:
+		scraper.setup()
+	except KeyboardInterrupt:
+		_log.info("Interrupted by user")
+		daemon_com.signal_terminated()
+		_log.info("Clean shutdown")
+		sys.exit(0)
 
 	def reload_scraper_config():
 		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
