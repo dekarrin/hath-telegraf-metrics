@@ -146,8 +146,8 @@ class PageScraper(object):
 
 			# build the values from the matched items
 			metric_values = {}
-			for value_name in metric_value_definitions:
-				value_def = metric_value_definitions[value_name]
+			for value_def in metric_value_definitions:
+				value_name = value_def['name']
 				value_group = value_def['capture']
 				value_type = value_def['type']
 				metric_values[value_name] = value_type(matcher.group(value_group))
