@@ -81,7 +81,6 @@ class PageScraper(object):
 		self._state_file = conf.env_state_file
 		self._save_frequency = int(conf.time_save_frequency)
 		self._client.start_new_session()
-		self._client.load_cookies(self._cookies_file)
 
 	def setup(self):
 		"""
