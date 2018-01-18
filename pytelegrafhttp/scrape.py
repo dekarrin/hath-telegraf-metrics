@@ -11,6 +11,7 @@ import urllib.parse
 import logging
 from .clock import now_ts
 import pprint
+import pickle
 import html
 
 
@@ -59,6 +60,8 @@ class PageScraper(object):
 		self._login_response = None
 		self._login_form = None
 		self._cookies_file = None
+		self._state_file = None
+		self._save_frequency = 0
 		super().__init__()
 
 	def load_config(self, conf):
@@ -75,30 +78,35 @@ class PageScraper(object):
 		self._endpoints = parse_config_endpoints(conf.scraper_endpoints, 'scraper_endpoints')
 		self._logged_in = False
 		self._cookies_file = conf.env_cookies_file
+		self._state_file = conf.env_state_file
+		self._save_frequency = int(conf.time_save_frequency)
 		self._client.start_new_session()
+		self._client.load_cookies(self._cookies_file)
 
 	def setup(self):
 		"""
 		Restore any necessary state.
 		"""
-		loaded = False
-		try:
-			self._client.load_cookies(self._cookies_file)
-			loaded = True
-		except FileNotFoundError:
-			_log.info("No cookies file found. Not loading cookies.")
+		loaded_cookies = self._load_state()
 
-		if not loaded:
+		if not loaded_cookies or not self._logged_in:
 			_log.info("Attempting initial login...")
 			self._login()
 			_log.info("Login successful")
 
 	def run_tick(self, clock):
+		"""
+		:type clock: TickClock
+		:param clock: Current tick.
+		"""
 		if not self._logged_in:
 			_log.warning("Not logged in; attempting login...")
 			self._login()
 			_log.info("Login successful")
 			return
+		if clock.tick % self._save_frequency == 0 and clock.tick != 0:
+			self._save_state()
+
 		for endpoint_data in self._endpoints:
 			self._scrape_endpoint(endpoint_data)
 
@@ -106,7 +114,7 @@ class PageScraper(object):
 		"""
 		Prepare for shutdown.
 		"""
-		self._client.save_cookies(self._cookies_file)
+		self._save_state()
 
 	def _scrape_endpoint(self, endpoint_data):
 		endpoint = endpoint_data['endpoint']
@@ -305,6 +313,33 @@ class PageScraper(object):
 			components['query'] = urllib.parse.parse_qs(res.query, keep_blank_values=True)
 
 		return components
+
+	def _save_state(self):
+		self._client.save_cookies(self._cookies_file)
+		_log.info("Wrote cookies to '" + self._cookies_file + "'")
+		state = {'logged_in': self._logged_in}
+		with open(self._state_file, 'wb') as f:
+			pickle.dump(state, f)
+			_log.info("Wrote state to '" + self._state_file + "'")
+
+	def _load_state(self):
+		loaded_cookies = False
+		try:
+			self._client.load_cookies(self._cookies_file)
+			loaded_cookies = True
+			_log.info("Read cookies from '" + self._cookies_file + "'")
+		except FileNotFoundError:
+			_log.debug("Cookies file not found at '" + self._cookies_file + "'; skipping")
+
+		try:
+			with open(self._state_file, 'rb') as f:
+				state = pickle.load(f)
+			_log.info("Read state from '" + self._state_file + "'")
+			self._logged_in = state['logged_in']
+		except FileNotFoundError:
+			_log.debug("State file not found at '" + self._state_file + "'; skipping")
+
+		return loaded_cookies
 
 	@property
 	def running(self):

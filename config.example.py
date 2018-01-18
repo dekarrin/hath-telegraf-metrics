@@ -10,7 +10,13 @@ install_dir = '/etc/pytelegrafhttp'
 env_daemon_files_dir = install_dir + '/daemon'
 
 # file to save cookies in
-env_cookies_file = install_dir + '/cookies'
+env_cookies_file = install_dir + '/cookies.pkl'
+
+# file to save general program state in
+env_state_file = install_dir + '/state.pkl'
+
+# How often the system should save state. Given in terms of 'ticks', where one tick is equal to the time of the
+# time_collection_interval
 
 
 ########
@@ -19,6 +25,10 @@ env_cookies_file = install_dir + '/cookies'
 
 # How often metrics are collected. Measured in seconds.
 time_collection_interval = 60
+
+# How often to save the state. Given in terms of time_collection_interval variable, so putting 10 here indicates that
+# the state should be saved after every 10th data collection.
+time_save_frequencey = 10
 
 
 ###########
