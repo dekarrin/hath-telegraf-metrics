@@ -32,7 +32,8 @@ def _parse_cli_and_run():
 	""":type : argparse.ArgumentParser"""
 	start_parser.add_argument('--config', help="Use the specified config file.", default='config.py')
 	start_parser.add_argument('--no-cookies', help="Skip loading cookies and state files", action='store_true')
-	start_parser.set_defaults(func=lambda ns: start(ns.config, ns.no_cookies))
+	start_parser.add_argument('--disable-antiflood', help="Turns off antiflood protections", action='store_true')
+	start_parser.set_defaults(func=lambda ns: start(ns.config, ns.no_cookies, ns.disable_antiflood))
 
 	# STOP
 	stop_desc = "Signals to a running metrics scraper to shut down, and waits for shut down to complete."

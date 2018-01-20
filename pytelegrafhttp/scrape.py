@@ -99,7 +99,8 @@ class VerificationError(Exception):
 
 class PageScraper(object):
 
-	def __init__(self):
+	def __init__(self, antiflood):
+		self._antiflood = antiflood
 		self._client = http.HttpAgent('localhost', request_payload='form', response_payload='text')
 		self._running = False
 		self._agent = False
@@ -193,6 +194,14 @@ class PageScraper(object):
 		if self._running:
 			self._save_state()
 
+	def antiflood_wait(self):
+		"""For multi-request operations, make sure we don't overload the server."""
+		# Numbers in this range are random, however it does seem that 2.5 seconds is a reasonable minimum for avoiding
+		# abuse of the system.
+		if self._antiflood:
+			secs = random.uniform(2.5, 6.5)
+			time.sleep(secs)
+
 	def _scrape_endpoint(self, endpoint_data):
 		endpoint = endpoint_data['endpoint']
 		verify_pattern = endpoint_data['verify-pattern']
@@ -266,7 +275,7 @@ class PageScraper(object):
 			for step in self._login_steps:
 				if step['type'] == 'attempt':
 					self._login_attempt_get(step['endpoint'])
-					antiflood_wait()
+					self.antiflood_wait()
 				elif step['type'] == 'resp-extract':
 					if step['extract-type'] == 'form-vars':
 						self._login_extract_response_form(step['inject'])
@@ -274,7 +283,7 @@ class PageScraper(object):
 						raise ValueError("Bad login step extract-type: " + step['extract-type'])
 				elif step['type'] == 'submit-form':
 					self._login_submit_form()
-					antiflood_wait()
+					self.antiflood_wait()
 				elif step['type'] == 'verify':
 					if not self._login_verify_response(step['pattern']):
 						self._running = False
@@ -283,7 +292,7 @@ class PageScraper(object):
 						self._logged_in = True
 				elif step['type'] == 'bounce-transfer':
 					self._login_bounce_transfer(step['pattern'])
-					antiflood_wait()
+					self.antiflood_wait()
 				else:
 					raise ValueError("Bad login step type: " + step['type'])
 		finally:
@@ -614,11 +623,3 @@ def parse_config_metric_tags(tags, key_path):
 				'value': t_value
 			}
 	return parsed_tags
-
-
-def antiflood_wait():
-	"""For multi-request operations, make sure we don't overload the server."""
-	# Numbers in this range are random, however it does seem that 2.5 seconds is a reasonable minimum for avoiding
-	# abuse of the system.
-	secs = random.uniform(2.5, 6.5)
-	time.sleep(secs)

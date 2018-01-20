@@ -12,14 +12,14 @@ import os
 _log = logging.getLogger('pytelegrafhttp')
 
 
-def start(config_file: str='config.py', no_cookies=False):
+def start(config_file: str='config.py', no_cookies=False, disable_antiflood=False):
 	os_logs = []
 	conf = None
 	main_log = None
 	err_log = None
 	secs_per_tick = 0.0
 	daemon_com = daemon.DaemonCommunicator()
-	scraper = scrape.PageScraper()
+	scraper = scrape.PageScraper(antiflood=not disable_antiflood)
 	clock = tickclock.TickClock()
 
 	def load_config():
