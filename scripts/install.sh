@@ -15,9 +15,7 @@ install_dir=/etc/pytelegrafhttp
 # build python wheel and install with pip
 cd "$script_dir/.."
 rm -rf build dist pytelegrafhtml.egg-info || { echo "Could not remove previous build directories" >&2; exit ${E_BUILD};}
-python setup.py bdist_wheel || { echo "Could not build wheel file" >&2; exit ${E_BUILD};}
-mv dist/pytelegrafhttp-*-py3-none-any.whl . || { echo "Created wheel architecture not valid; must be '..-py3-none-any'" >&2; exit ${E_BUILD};}
-pip install pytelegrafhttp-*-py3-none-any.whl || { echo "Could not install wheel" >&2; exit ${E_BUILD};}
+python3 setup.py install || { echo "Could not build/install wheel file" >&2; exit ${E_BUILD};}
 
 # create system user
 if ! id pytelegrafhttp >/dev/null 2>&1

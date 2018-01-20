@@ -79,6 +79,16 @@ scraper_login_steps = [
 ]
 scraper_logged_out_pattern = 'requires you to log on.</p>'
 scraper_bot_kicked_pattern = 'banned for excessive pageloads which indicates'
+scraper_telegraf_destinations = {
+	'hath-net': {
+		'port': 10000,
+		'global-tags': {}
+	},
+	'hath-client-net-stats': {
+		'port': 10001,
+		'global-tags': {}
+	}
+}
 scraper_endpoints = []
 scraper_endpoints.append({
 	'endpoint': '/fancomicsathome.php',

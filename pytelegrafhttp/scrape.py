@@ -13,6 +13,7 @@ from .clock import now_ts
 import pprint
 import pickle
 import html
+from telegraf.client import TelegrafClient
 
 
 _log = logging.getLogger(__name__)
@@ -116,6 +117,7 @@ class PageScraper(object):
 		self._save_frequency = 0
 		self._logged_out_pattern = None
 		self._bot_kicked_pattern = None
+		self._telegraf_clients = {}
 		super().__init__()
 
 	def load_config(self, conf):
@@ -129,6 +131,7 @@ class PageScraper(object):
 		passwd = util.get_config_str(conf, 'scraper_password')
 		login_steps = parse_config_login_steps(conf.scraper_login_steps, 'scraper_login_steps')
 		endpoints = parse_config_endpoints(conf.scraper_endpoints, 'scraper_endpoints')
+		tele_confs = parse_config_telegraf_clients(conf.scraper_telegraf_destinations, 'scraper_telegraf_destinations')
 		cookies_file = util.get_config_str(conf, 'env_cookies_file')
 		state_file = util.get_config_str(conf, 'env_state_file')
 		save_freq = util.get_config_int(conf, 'time_save_frequency')
@@ -145,6 +148,10 @@ class PageScraper(object):
 		self._cookies_file = cookies_file
 		self._state_file = state_file
 		self._save_frequency = save_freq
+		self._telegraf_clients = {}
+		for tele in tele_confs:
+			client_conf = tele_confs[tele]
+			self._telegraf_clients[tele] = TelegrafClient(port=client_conf['port'], tags=client_conf['tags'])
 		self._client.start_new_session()
 
 	def setup(self, no_cookies=False):
@@ -258,13 +265,11 @@ class PageScraper(object):
 			self._send_metric_burst(b[0], ts, b[1]['metric'], b[1]['values'], b[1]['tags'])
 
 	def _send_metric_burst(self, channel, timestamp, metric, values, tags):
-		_log.info("TEST: SEND METRICS TO " + channel)
-		pprint.pprint((
-			metric,
-			tags,
-			values,
-			timestamp
-		))
+		if channel not in self._telegraf_clients:
+			_log.warning("No configured telegraf client for channel '" + channel + "'")
+			return
+		client = self._telegraf_clients[channel]
+		client.metric(metric, values, tags=tags, timestamp=timestamp)
 
 	def _login(self):
 		self._login_response = None
@@ -619,3 +624,31 @@ def parse_config_metric_tags(tags, key_path):
 				'value': t_value
 			}
 	return parsed_tags
+
+
+def parse_config_telegraf_clients(clients, key_path):
+	parsed_clients = {}
+	for name in clients:
+		parsed_name = str(name)
+		key = key_path + "['" + parsed_name + "']"
+		try:
+			cl_value = clients[parsed_name]
+		except KeyError:
+			raise util.ConfigException("telegraf destination must be str() type", key)
+
+		try:
+			c_port = int(cl_value['port'])
+		except KeyError:
+			raise util.ConfigException("telegraf destination must contain 'port' key", key)
+		except ValueError:
+			raise util.ConfigException("telegraf destination port not a valid int", key)
+
+		try:
+			tags = dict(cl_value['global_tags'])
+		except KeyError:
+			raise util.ConfigException("telegraf destination must contain 'global_tags' key", key)
+		except ValueError:
+			raise util.ConfigException("telegraf destination global tags not a valid dict", key)
+
+		parsed_clients[parsed_name] = {'port': c_port, 'tags': tags}
+	return parsed_clients
