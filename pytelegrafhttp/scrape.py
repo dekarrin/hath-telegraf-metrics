@@ -210,8 +210,6 @@ class PageScraper(object):
 		ts = now_ts(ms=True)
 
 		status, endpoint_text = self._client.request('GET', endpoint)
-		_log.info(endpoint_text)
-		_log.info(verify_pattern)
 		if verify_pattern.search(endpoint_text) is None:
 			raise VerificationError("endpoint did not match expected content", endpoint_text)
 		idx = 0
@@ -223,7 +221,7 @@ class PageScraper(object):
 			metric_value_definitions = m['values']
 			metric_tag_definitions = m['tags']
 
-			matcher = pattern.search(endpoint_text, re.DOTALL)
+			matcher = pattern.search(endpoint_text)
 			if matcher is None:
 				warning_text = "endpoint '" + endpoint + "', metric " + str(idx) + " (" + metric_name + ")"
 				warning_text += " could not be found. Skipping for this unit of time"
@@ -300,7 +298,7 @@ class PageScraper(object):
 			self._login_form = None
 
 	def _login_bounce_transfer(self, pattern):
-		m = pattern.search(self._login_response, re.DOTALL)
+		m = pattern.search(self._login_response)
 		if m is None:
 			raise LoginError("Could not bounce from login response; regex failed")
 		next_link = self._parse_link(m.group(1))
@@ -312,9 +310,7 @@ class PageScraper(object):
 		status, self._login_response = self._client.request('GET', uri, host=host, query=params)
 
 	def _login_verify_response(self, pattern):
-		_log.info(str(pattern))
-		_log.info(self._login_response[:25])
-		return pattern.search(self._login_response[:25]) is not None
+		return pattern.search(self._login_response) is not None
 
 	def _login_attempt_get(self, endpoint):
 		status, self._login_response = self._client.request('GET', endpoint)
