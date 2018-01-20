@@ -12,6 +12,12 @@ import os
 _log = logging.getLogger('pytelegrafhttp')
 
 
+class _SystemReload(BaseException):
+
+	def __init__(self):
+		super().__init__()
+
+
 def start(config_file: str='config.py', no_cookies=False, disable_antiflood=False):
 	os_logs = []
 	conf = None
@@ -67,13 +73,9 @@ def start(config_file: str='config.py', no_cookies=False, disable_antiflood=Fals
 		if load_failed:
 			raise SystemExit()
 
-	def _handle_signal():
-		_log.info("SIGTERM" + " received; shutdown")
-		sys.exit(0)
-
 	load_config()
+	_setup_traps()
 	daemon_com.signal_started()
-	_setup_traps(reload_scraper_config, _handle_signal)
 
 	# main loop
 	try:
@@ -84,6 +86,8 @@ def start(config_file: str='config.py', no_cookies=False, disable_antiflood=Fals
 			try:
 				scraper.run_tick(clock)
 				last_good_tick = clock.tick
+			except _SystemReload:
+				reload_scraper_config()
 			except scrape.FatalError as e:
 				raise e
 			except Exception:
@@ -129,13 +133,21 @@ def reload(pid: int, config_file: str='config.py'):
 	daemon_com.wait_for_reload(pid)
 
 
-def _setup_traps(sighup_closure, sigterm_closure):
+def _handle_signal(signal_name):
+	if signal_name == "SIGHUP":
+		raise _SystemReload()
+	else:
+		_log.info(signal_name + " received; shutdown")
+		sys.exit(0)
+
+
+def _setup_traps():
 	import signal
 	import os
-	signal.signal(signal.SIGTERM, lambda x, y: sigterm_closure)
+	signal.signal(signal.SIGTERM, lambda x, y: _handle_signal("SIGTERM"))
 	if os.name != 'nt':
 		# Windows does not allow these signals, but other systems do
-		signal.signal(signal.SIGHUP, lambda x, y: sighup_closure)
+		signal.signal(signal.SIGHUP, lambda x, y: _handle_signal("SIGHUP"))
 	else:
 		# This handler will exist on windows, so don't show warnings
 		# noinspection PyUnresolvedReferences
