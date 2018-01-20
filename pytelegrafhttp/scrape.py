@@ -313,8 +313,8 @@ class PageScraper(object):
 
 	def _login_verify_response(self, pattern):
 		_log.info(str(pattern))
-		_log.info(self._login_response)
-		return pattern.search(self._login_response, re.DOTALL) is not None
+		_log.info(self._login_response[:25])
+		return pattern.search(self._login_response[:25], re.DOTALL) is not None
 
 	def _login_attempt_get(self, endpoint):
 		status, self._login_response = self._client.request('GET', endpoint)
