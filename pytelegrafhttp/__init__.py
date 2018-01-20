@@ -31,7 +31,8 @@ def _parse_cli_and_run():
 	start_parser = subparsers.add_parser('start', help='Start the metrics scraper.', description=start_desc)
 	""":type : argparse.ArgumentParser"""
 	start_parser.add_argument('--config', help="Use the specified config file.", default='config.py')
-	start_parser.set_defaults(func=lambda ns: start(ns.config))
+	start_parser.add_argument('--no-cookies', help="Skip loading cookies and state files", action='store_true')
+	start_parser.set_defaults(func=lambda ns: start(ns.config, ns.no_cookies))
 
 	# STOP
 	stop_desc = "Signals to a running metrics scraper to shut down, and waits for shut down to complete."

@@ -12,7 +12,7 @@ import os
 _log = logging.getLogger('pytelegrafhttp')
 
 
-def start(config_file: str='config.py'):
+def start(config_file: str='config.py', no_cookies=False):
 	os_logs = []
 	conf = None
 	main_log = None
@@ -72,7 +72,7 @@ def start(config_file: str='config.py'):
 
 	# main loop
 	try:
-		scraper.setup()
+		scraper.setup(no_cookies)
 		last_good_tick = clock.stop().reset().start(secs_per_tick).tick
 		while scraper.running:
 			# noinspection PyBroadException

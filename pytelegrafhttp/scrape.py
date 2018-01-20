@@ -146,11 +146,14 @@ class PageScraper(object):
 		self._save_frequency = save_freq
 		self._client.start_new_session()
 
-	def setup(self):
+	def setup(self, no_cookies=False):
 		"""
 		Restore any necessary state.
 		"""
-		loaded_cookies = self._load_state()
+		if not no_cookies:
+			loaded_cookies = self._load_state()
+		else:
+			loaded_cookies = False
 
 		if not loaded_cookies or not self._logged_in:
 			_log.info("Attempting initial login...")
