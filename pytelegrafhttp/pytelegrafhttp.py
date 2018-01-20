@@ -67,9 +67,13 @@ def start(config_file: str='config.py', no_cookies=False, disable_antiflood=Fals
 		if load_failed:
 			raise SystemExit()
 
+	def _handle_signal():
+		_log.info("SIGTERM" + " received; shutdown")
+		sys.exit(0)
+
 	load_config()
 	daemon_com.signal_started()
-	_setup_traps(reload_scraper_config)
+	_setup_traps(reload_scraper_config, _handle_signal)
 
 	# main loop
 	try:
@@ -125,15 +129,10 @@ def reload(pid: int, config_file: str='config.py'):
 	daemon_com.wait_for_reload(pid)
 
 
-def _handle_signal(signal_name):
-	_log.info(signal_name + " received; shutdown")
-	sys.exit(0)
-
-
-def _setup_traps(sighup_closure):
+def _setup_traps(sighup_closure, sigterm_closure):
 	import signal
 	import os
-	signal.signal(signal.SIGTERM, lambda x, y: _handle_signal("SIGTERM"))
+	signal.signal(signal.SIGTERM, lambda x, y: sigterm_closure)
 	if os.name != 'nt':
 		# Windows does not allow these signals, but other systems do
 		signal.signal(signal.SIGHUP, lambda x, y: sighup_closure)
