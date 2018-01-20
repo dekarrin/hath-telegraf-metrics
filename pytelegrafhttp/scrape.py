@@ -201,6 +201,8 @@ class PageScraper(object):
 		ts = now_ts(ms=True)
 
 		status, endpoint_text = self._client.request('GET', endpoint)
+		_log.info(endpoint_text)
+		_log.info(verify_pattern)
 		if verify_pattern.search(endpoint_text) is None:
 			raise VerificationError("endpoint did not match expected content", endpoint_text)
 		idx = 0
@@ -212,7 +214,7 @@ class PageScraper(object):
 			metric_value_definitions = m['values']
 			metric_tag_definitions = m['tags']
 
-			matcher = pattern.search(endpoint_text)
+			matcher = pattern.search(endpoint_text, re.DOTALL)
 			if matcher is None:
 				warning_text = "endpoint '" + endpoint + "', metric " + str(idx) + " (" + metric_name + ")"
 				warning_text += " could not be found. Skipping for this unit of time"
@@ -480,7 +482,7 @@ def parse_config_login_steps(steps, key_path):
 			pass  # no additional data
 		elif step_type == 'verify':
 			try:
-				parsed_step['pattern'] = re.compile(str(step_data['pattern']))
+				parsed_step['pattern'] = re.compile(str(step_data['pattern']), re.DOTALL)
 			except KeyError:
 				raise util.ConfigException("'verify' login step data must include 'pattern'", key)
 			except re.error as e:
@@ -504,7 +506,7 @@ def parse_config_endpoints(endpoints, key_path):
 			raise util.ConfigException("endpoint data must contain 'endpoint' key", key)
 
 		try:
-			parsed_ep['verify-pattern'] = re.compile(ep_data['verify-pattern'])
+			parsed_ep['verify-pattern'] = re.compile(ep_data['verify-pattern'], re.DOTALL)
 		except KeyError:
 			raise util.ConfigException("endpoint data must contain 'verify-pattern'", key)
 		except re.error as e:
@@ -568,7 +570,7 @@ def parse_config_metrics(metrics, key_path):
 			raise util.ConfigException("endpoint metric must contain 'dest' key", key)
 
 		try:
-			parsed_met['regex'] = re.compile(''.join(m['regex']))
+			parsed_met['regex'] = re.compile(''.join(m['regex']), re.DOTALL)
 		except KeyError:
 			raise util.ConfigException("endpoint metric must contain 'regex' list", key)
 		except re.error as e:
