@@ -55,8 +55,16 @@ def start(config_file: str='config.py'):
 		clock.stop()
 		clock.reset()
 
-		load_config()
+		load_failed = False
+		# noinspection PyBroadException
+		try:
+			load_config()
+		except Exception:
+			_log.exception("could not reload log; terminate now")
+			load_failed = True
 		daemon_com.signal_reload_completed()
+		if load_failed:
+			raise SystemExit()
 
 	load_config()
 	daemon_com.signal_started()
@@ -71,13 +79,20 @@ def start(config_file: str='config.py'):
 			try:
 				scraper.run_tick(clock)
 				last_good_tick = clock.tick
-			except scrape.LoginError:
-				_log.error("Login failed; cannot continue")
+			except scrape.FatalError as e:
+				raise e
 			except Exception:
 				_log.exception("Problem in tick " + str(clock.tick))
 				_log.error("Last good tick: " + str(last_good_tick))
-			clock.advance()
-		_log.info("Exchange client has no more ticks")
+			if scraper.running:
+				clock.advance()
+		_log.info("Scraper is no longer running.")
+	except scrape.StateError:
+		_log.exception("Bad state of scraper; cannot continue")
+	except scrape.LoginError:
+		_log.exception("Login to server failed; cannot continue")
+	except scrape.BotKickedError:
+		_log.exception("Scraper was kicked for performing in suspicious manner; cannot continue")
 	except KeyboardInterrupt:
 		_log.info("Interrupted by user")
 	except SystemExit:

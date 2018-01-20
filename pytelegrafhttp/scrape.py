@@ -19,7 +19,30 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
 
-class LoginError(Exception):
+class FatalError(Exception):
+	"""
+	Raised for actions that the scraper cannot recover from. If one of these is raised, the running state is set to
+	false and the scraper should not be used anymore.
+	"""
+
+	def __init__(self, msg):
+		super().__init__(msg)
+
+
+class StateError(FatalError):
+	"""
+	Raised when the scraper is not in the appropriate state to perform the requested action.
+	"""
+	def __init__(self, msg):
+		"""
+		Creates a new StateError.
+
+		:param msg: The messages.
+		"""
+		super().__init__(msg)
+
+
+class LoginError(FatalError):
 	"""
 	Raised when login could not be completed.
 	"""
@@ -32,17 +55,45 @@ class LoginError(Exception):
 		super().__init__(msg)
 
 
+class BotKickedError(FatalError):
+	"""
+	Raised when client is kicked for misbehaving as a bot.
+	"""
+	def __init__(self, msg):
+		"""
+		Creates a new BotKickedError.
+
+		:param msg: The message.
+		"""
+		super().__init__(msg)
+
+
+class AuthError(Exception):
+	"""
+	Raised when a current good session appears to have expired.
+	"""
+	def __init__(self, msg):
+		"""
+		Creates a new AuthError.
+
+		:param msg: The message.
+		"""
+		super().__init__(msg)
+
+
 class VerificationError(Exception):
 	"""
 	Raise when a page did not match the expected content.
 	"""
 
-	def __init__(self, msg):
+	def __init__(self, msg, content):
 		"""
 		Creates a new VerificationError.
 
 		:param msg: The messages.
+		:param content: The content that did not match.
 		"""
+		self.content = content
 		super().__init__(msg)
 
 
@@ -50,7 +101,7 @@ class PageScraper(object):
 
 	def __init__(self):
 		self._client = http.HttpAgent('localhost', request_payload='form', response_payload='text')
-		self._running = True
+		self._running = False
 		self._agent = False
 		self._user = None
 		self._password = None
@@ -61,26 +112,38 @@ class PageScraper(object):
 		self._login_form = None
 		self._cookies_file = None
 		self._state_file = None
-		self._setup_complete = False
 		self._save_frequency = 0
+		self._logged_out_pattern = None
+		self._bot_kicked_pattern = None
 		super().__init__()
 
 	def load_config(self, conf):
-		host = conf.scraper_host
-		user = conf.scraper_username
-		passwd = conf.scraper_password
-		ssl = conf.scraper_use_ssl
+		# try to load config before setting values, so a later one being invalid does not leave us in a
+		# partially-updated state
+		logged_out_pattern = util.get_config_regex(conf, 'scraper_logged_out_pattern')
+		bot_kicked_pattern = util.get_config_regex(conf, 'scraper_bot_kicked_pattern')
+		ssl = util.get_config_bool(conf, 'scraper_use_ssl')
+		host = util.get_config_str(conf, 'scraper_host')
+		user = util.get_config_str(conf, 'scraper_username')
+		passwd = util.get_config_str(conf, 'scraper_password')
+		login_steps = parse_config_login_steps(conf.scraper_login_steps, 'scraper_login_steps')
+		endpoints = parse_config_endpoints(conf.scraper_endpoints, 'scraper_endpoints')
+		cookies_file = util.get_config_str(conf, 'env_cookies_file')
+		state_file = util.get_config_str(conf, 'env_state_file')
+		save_freq = util.get_config_int(conf, 'time_save_frequency')
 
+		self._logged_out_pattern = logged_out_pattern
+		self._bot_kicked_pattern = bot_kicked_pattern
 		self._client.ssl = ssl
 		self._client.host = host
 		self._user = user
 		self._password = base64.b85encode(passwd.encode('utf-8'))
-		self._login_steps = parse_config_login_steps(conf.scraper_login_steps, 'scraper_login_steps')
-		self._endpoints = parse_config_endpoints(conf.scraper_endpoints, 'scraper_endpoints')
+		self._login_steps = login_steps
+		self._endpoints = endpoints
 		self._logged_in = False
-		self._cookies_file = conf.env_cookies_file
-		self._state_file = conf.env_state_file
-		self._save_frequency = int(conf.time_save_frequency)
+		self._cookies_file = cookies_file
+		self._state_file = state_file
+		self._save_frequency = save_freq
 		self._client.start_new_session()
 
 	def setup(self):
@@ -93,13 +156,15 @@ class PageScraper(object):
 			_log.info("Attempting initial login...")
 			self._login()
 			_log.info("Login successful")
-		self._setup_complete = True
+		self._running = True
 
 	def run_tick(self, clock):
 		"""
 		:type clock: TickClock
 		:param clock: Current tick.
 		"""
+		if not self._running:
+			raise StateError("Not currently running; call setup() first")
 		if not self._logged_in:
 			_log.warning("Not logged in; attempting login...")
 			self._login()
@@ -109,13 +174,20 @@ class PageScraper(object):
 			self._save_state()
 
 		for endpoint_data in self._endpoints:
-			self._scrape_endpoint(endpoint_data)
+			try:
+				self._scrape_endpoint(endpoint_data)
+			except VerificationError as e:
+				if self._bot_kicked_pattern.search(e.content) is not None:
+					raise BotKickedError("automated client was kicked/banned from the server: " + e.content)
+				elif self._logged_out_pattern.search(e.content) is not None:
+					self._logged_in = False
+					raise AuthError("login is no longer valid")
 
 	def cleanup(self):
 		"""
 		Prepare for shutdown.
 		"""
-		if self._setup_complete:
+		if self._running:
 			self._save_state()
 
 	def _scrape_endpoint(self, endpoint_data):
@@ -127,7 +199,7 @@ class PageScraper(object):
 
 		status, endpoint_text = self._client.request('GET', endpoint)
 		if verify_pattern.search(endpoint_text) is None:
-			raise VerificationError("endpoint did not match expected content")
+			raise VerificationError("endpoint did not match expected content", endpoint_text)
 		idx = 0
 		bursts = []
 		for m in metrics:
@@ -522,7 +594,7 @@ def parse_config_metric_tags(tags, key_path):
 		try:
 			t_value = str(tags[t_name])
 		except KeyError:
-			raise util.ConfigException("metric tags must have str-type name", key)
+			raise util.ConfigException("metric tag keys must be str() type.", key)
 		if re.match(r'CAPTURE-\d+', t_value) is not None:
 			cap, cap_group = t_value.split('-')
 			parsed_tags[t_name] = {

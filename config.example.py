@@ -77,6 +77,8 @@ scraper_login_steps = [
 	('bounce-transfer', {'pattern': '<a href="([^"]+)">Or click here if you do not wish to wait</a>'}),
 	('verify', {'pattern': 'F@H Miss% shows the percentage of requests'})
 ]
+scraper_logged_out_pattern = 'requires you to log on.</p>'
+scraper_bot_kicked_pattern = 'banned for excessive pageloads which indicates'
 scraper_endpoints = []
 scraper_endpoints.append({
 	'endpoint': '/fancomicsathome.php',
