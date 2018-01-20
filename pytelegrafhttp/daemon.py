@@ -14,7 +14,6 @@ class DaemonCommunicator(object):
 
 	def load_config(self, conf):
 		self._daemon_dir = conf.env_daemon_files_dir
-		self.clear_signals()
 
 	def clear_signals(self):
 		fn = self._get_filename_for('running')
