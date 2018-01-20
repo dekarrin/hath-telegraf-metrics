@@ -7,9 +7,9 @@ After=network-online.target
 Type=simple
 User=pytelegrafhttp
 Group=pytelegrafhttp
-ExecStart=/usr/bin/pytelegrafhttp start --config /etc/pytelegrafhttp/config.py
-ExecReload=/usr/bin/pytelegrafhttp reload-config $MAINPID --config /etc/pytelegrafhttp/config.py
-ExecStop=/usr/bin/pytelegrafhttp stop $MAINPID --config /etc/pytelegrafhttp/config.py
+ExecStart=/usr/local/bin/pytelhttp start --config /etc/pytelegrafhttp/config.py
+ExecReload=/usr/local/bin/pytelhttp reload-config $MAINPID --config /etc/pytelegrafhttp/config.py
+ExecStop=/usr/local/bin/pytelhttp stop $MAINPID --config /etc/pytelegrafhttp/config.py
 Restart=on-abort
 KillMode=control-group
 
