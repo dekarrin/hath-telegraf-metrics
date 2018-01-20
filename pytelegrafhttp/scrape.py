@@ -221,6 +221,8 @@ class PageScraper(object):
 			metric_value_definitions = m['values']
 			metric_tag_definitions = m['tags']
 
+			_log.info(pattern)
+			_log.info(endpoint_text)
 			matcher = pattern.search(endpoint_text)
 			if matcher is None:
 				warning_text = "endpoint '" + endpoint + "', metric " + str(idx) + " (" + metric_name + ")"
