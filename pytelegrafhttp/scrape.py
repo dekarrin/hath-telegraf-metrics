@@ -644,9 +644,9 @@ def parse_config_telegraf_clients(clients, key_path):
 			raise util.ConfigException("telegraf destination port not a valid int", key)
 
 		try:
-			tags = dict(cl_value['global_tags'])
+			tags = dict(cl_value['global-tags'])
 		except KeyError:
-			raise util.ConfigException("telegraf destination must contain 'global_tags' key", key)
+			raise util.ConfigException("telegraf destination must contain 'global-tags' key", key)
 		except ValueError:
 			raise util.ConfigException("telegraf destination global tags not a valid dict", key)
 
