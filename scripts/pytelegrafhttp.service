@@ -9,8 +9,8 @@ User=pytelegrafhttp
 Group=pytelegrafhttp
 ExecStart=/usr/bin/pytelegrafhttp start --config /etc/pytelegrafhttp/config.py
 ExecReload=/usr/bin/pytelegrafhttp reload-config $MAINPID --config /etc/pytelegrafhttp/config.py
-ExecStop=/usr/bin/pytelegrafhttp stop $MAINPID
-Restart=on-failure
+ExecStop=/usr/bin/pytelegrafhttp stop $MAINPID --config /etc/pytelegrafhttp/config.py
+Restart=on-abort
 KillMode=control-group
 
 [Install]
