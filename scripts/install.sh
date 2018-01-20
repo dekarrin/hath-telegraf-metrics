@@ -15,6 +15,7 @@ install_dir=/etc/pytelegrafhttp
 # build python wheel and install with pip
 cd "$script_dir/.."
 rm -rf build dist pytelegrafhtml.egg-info || { echo "Could not remove previous build directories" >&2; exit ${E_BUILD};}
+# TODO: Do not exec as root
 python3 setup.py install || { echo "Could not build/install wheel file" >&2; exit ${E_BUILD};}
 
 # create system user
