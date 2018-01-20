@@ -39,7 +39,7 @@ def _parse_cli_and_run():
 	stop_desc = "Signals to a running metrics scraper to shut down, and waits for shut down to complete."
 	stop_parser = subparsers.add_parser('stop', help='Stop a metrics scraper.', description=stop_desc)
 	""":type : argparse.ArgumentParser"""
-	stop_parser.add_argument('PID', type=int, help='PID of scraper to stop.')
+	stop_parser.add_argument('pid', type=int, help='PID of scraper to stop.')
 	stop_parser.add_argument('--config', help="Use the specified config file.", default='config.py')
 	stop_parser.set_defaults(func=lambda ns: stop(ns.pid, ns.config))
 
@@ -51,7 +51,7 @@ def _parse_cli_and_run():
 		description=rel_desc
 	)
 	""":type : argparse.ArgumentParser"""
-	rel_parser.add_argument('PID', type=int, help='PID of scraper to tell to reload.')
+	rel_parser.add_argument('pid', type=int, help='PID of scraper to tell to reload.')
 	rel_parser.add_argument('--config', help="Use the specified config file.", default='config.py')
 	rel_parser.set_defaults(func=lambda ns: reload(ns.pid, ns.config))
 
