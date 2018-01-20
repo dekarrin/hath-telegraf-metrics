@@ -82,19 +82,20 @@ def start(config_file: str='config.py', no_cookies=False, disable_antiflood=Fals
 		scraper.setup(no_cookies)
 		last_good_tick = clock.stop().reset().start(secs_per_tick).tick
 		while scraper.running:
-			# noinspection PyBroadException
 			try:
-				scraper.run_tick(clock)
-				last_good_tick = clock.tick
+				# noinspection PyBroadException
+				try:
+					scraper.run_tick(clock)
+					last_good_tick = clock.tick
+				except scrape.FatalError as e:
+					raise e
+				except Exception:
+					_log.exception("Problem in tick " + str(clock.tick))
+					_log.error("Last good tick: " + str(last_good_tick))
+				if scraper.running:
+					clock.advance()
 			except _SystemReload:
 				reload_scraper_config()
-			except scrape.FatalError as e:
-				raise e
-			except Exception:
-				_log.exception("Problem in tick " + str(clock.tick))
-				_log.error("Last good tick: " + str(last_good_tick))
-			if scraper.running:
-				clock.advance()
 		_log.info("Scraper is no longer running.")
 	except scrape.StateError:
 		_log.exception("Bad state of scraper; cannot continue")
