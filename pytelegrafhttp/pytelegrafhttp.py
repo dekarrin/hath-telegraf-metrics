@@ -47,6 +47,7 @@ def start(config_file: str='config.py', no_cookies=False, disable_antiflood=Fals
 
 	def reload_scraper_config():
 		nonlocal conf, os_logs, main_log, err_log, secs_per_tick, last_good_tick
+		_log.info("Received SIGHUP; reloading config")
 		_log.removeHandler(err_log)
 		_log.removeHandler(main_log)
 		for ol in os_logs:
