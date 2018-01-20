@@ -13,7 +13,7 @@ class ConfigException(Exception):
 		identifies the key.
 		"""
 		self.key = key
-		super(self).__init__(msg)
+		super().__init__(msg)
 
 
 def get_config_regex(conf, var_name):
@@ -29,7 +29,7 @@ def get_config_regex(conf, var_name):
 	try:
 		var_val = re.compile(var_val, re.DOTALL)
 	except re.error as e:
-		raise util.ConfigException("Regex not valid: '" + str(var_val) + "': " + str(e), var_name)
+		raise ConfigException("Regex not valid: '" + str(var_val) + "': " + str(e), var_name)
 	return var_val
 
 
