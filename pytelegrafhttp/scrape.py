@@ -259,6 +259,7 @@ class PageScraper(object):
 				'values': metric_values,
 				'tags': metric_tags
 			}))
+			idx += 1
 
 		_log.info("Got metrics for " + endpoint + "; sending...")
 		for b in bursts:
