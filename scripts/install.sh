@@ -9,14 +9,17 @@ E_ETC=4
 [ "$(id -u)" -eq 0 ] || { echo "Must be run as root" >&2; exit ${E_USER_REQS};}
 hash systemctl 2>/dev/null || { echo "Systemd required but not installed. Abort." >&2; exit ${E_USER_REQS};}
 
+[ $# -ge 1 ] || { echo "User to install python command as must be given as first argument" >&2; exit ${E_USER_REQS};}
+
+command_user="$1"
+id -u "$command_user" >/dev/null 2>&1 || { echo "User '$command_user' does not appear to exist. Cannot install command as user"; exit ${E_USER_REQS};}
+
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 install_dir=/etc/pytelegrafhttp
 
 # build python wheel and install with pip
 cd "$script_dir/.."
-rm -rf build dist pytelegrafhtml.egg-info || { echo "Could not remove previous build directories" >&2; exit ${E_BUILD};}
-# TODO: Do not exec as root
-python3 setup.py install || { echo "Could not build/install wheel file" >&2; exit ${E_BUILD};}
+su --preserve-environment -c 'python3 setup.py install' "$command_user" || { echo "Could not build/install wheel file" >&2; exit ${E_BUILD};}
 
 # create system user
 if ! id pytelegrafhttp >/dev/null 2>&1
@@ -29,7 +32,7 @@ if ! [ -d "$install_dir" ]
 then
 	mkdir "$install_dir" || { echo "Could not create $install_dir directory" >&2; exit ${E_ETC};}
 	chown pytelegrafhttp:pytelegrafhttp "$install_dir" || { echo "Could not set owner of install directory" >&2; exit ${E_ETC};}
-	chmod 774 "$install_dir" || { echo "Could not set mode of install directory" >&2; exit ${E_ETC};}
+	chmod 775 "$install_dir" || { echo "Could not set mode of install directory" >&2; exit ${E_ETC};}
 fi
 
 # create logs directory
@@ -37,7 +40,7 @@ if ! [ -d "$install_dir/logs" ]
 then
 	mkdir "$install_dir/logs" || { echo "Could not create logs directory" >&2; exit ${E_ETC};}
 	chown pytelegrafhttp:pytelegrafhttp "$install_dir/logs" || { echo "Could not set owner of logs directory" >&2; exit ${E_ETC};}
-	chmod 774 "$install_dir/logs" || { echo "Could not set mode of logs directory" >&2; exit ${E_ETC};}
+	chmod 775 "$install_dir/logs" || { echo "Could not set mode of logs directory" >&2; exit ${E_ETC};}
 fi
 
 # create daemon directory
