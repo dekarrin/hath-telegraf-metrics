@@ -374,7 +374,6 @@ def _datetime_to_ts(utc: datetime.datetime, ms: bool=False) -> int:
 	:param ms: Whether to output the timestamp in milliseconds rather than seconds. If false, it is returned in seconds.
 	:return: The timestamp for the given date.
 	"""
-	# TODO: Fix this, it is wrong.
 	if utc.utcoffset() is None:
 		raise ValueError("Datetime is not tz-aware")
 	utc = utc.astimezone(datetime.timezone.utc)
@@ -391,8 +390,4 @@ def now_ts(ms: bool=False) -> int:
 	:param ms: Whether to return the timestamp in milliseconds rather than seconds. If false, it is returned in seconds.
 	:return: The timestamp of the current time.
 	"""
-	now_time = time.time()
-	if ms:
-		now_time *= 1000
-	now_time = int(round(now_time))
-	return now_time
+	return _datetime_to_ts(now(), ms=ms)
