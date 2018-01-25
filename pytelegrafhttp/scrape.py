@@ -214,7 +214,7 @@ class PageScraper(object):
 		verify_pattern = endpoint_data['verify-pattern']
 		metrics = endpoint_data['metrics']
 
-		ts = now_ts(ms=True)
+		ts = now_ts(ms=True) * 1000000  # influx db has nano-second precision
 
 		status, endpoint_text = self._client.request('GET', endpoint)
 		if verify_pattern.search(endpoint_text) is None:
