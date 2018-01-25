@@ -15,7 +15,7 @@ _log.setLevel(logging.DEBUG)
 
 
 _default_http_headers = {
-	"User-Agent": requests.utils.default_user_agent(),
+	"User-Agent": 'Mozilla/5.0',
 	"Accept-Encoding": "deflate,gzip,identity"
 }
 
