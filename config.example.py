@@ -203,7 +203,7 @@ scraper_endpoints.append({
 				r'<td>([^ ]+) / day</td>\s*',
 			],
 			'values': [
-				{'name': 'online', 'type': lambda s: s == 'Online', 'capture': 3},
+				{'name': 'online', 'type': lambda s: 1 if s == 'Online' else 0, 'capture': 3},
 				{'name': 'files', 'type': int, 'capture': 4},
 				{'name': 'trust', 'type': int, 'capture': 5},
 				{'name': 'quality', 'type': int, 'capture': 6},
