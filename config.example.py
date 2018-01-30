@@ -89,6 +89,18 @@ scraper_telegraf_destinations = {
 		'global-tags': {}
 	}
 }
+
+
+# used for checking whether client is online based on last seen time.
+def check_online(last_seen_str, max_minutes):
+	from dateparser import parse
+	from datetime import datetime, timezone, timedelta
+	now = datetime.utcnow().replace(tzinfo=timezone.utc)
+	last_seen = parse(last_seen_str, languages=['en'], settings={'TIMEZONE': 'UTC', 'RETURN_AS_TIMEZONE_AWARE': True})
+	max_time = timedelta(minutes=max_minutes)
+	return now - last_seen > max_time
+
+
 scraper_endpoints = []
 scraper_endpoints.append({
 	'endpoint': '/fancomicsathome.php',
@@ -108,11 +120,11 @@ scraper_endpoints.append({
 				r'<td [^>]*>([^<]+)</td>',
 			],
 			'values': [
-				{'name': 'load', 'type': int, 'capture': 1},
-				{'name': 'miss-rate', 'type': float, 'capture': 2},
-				{'name': 'coverage', 'type': float, 'capture': 3},
-				{'name': 'hits-per-gb', 'type': float, 'capture': 4},
-				{'name': 'quality', 'type': int, 'capture': 5}
+				{'name': 'load', 'conversion': int, 'type': 'CAPTURE-1'},
+				{'name': 'miss-rate', 'conversion': float, 'type': 'CAPTURE-2'},
+				{'name': 'coverage', 'conversion': float, 'type': 'CAPTURE-3'},
+				{'name': 'hits-per-gb', 'conversion': float, 'type': 'CAPTURE-4'},
+				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-5'}
 			],
 			'tags': {'region': 'americas'}
 		},
@@ -130,11 +142,11 @@ scraper_endpoints.append({
 				r'<td [^>]*>([^<]+)</td>',
 			],
 			'values': [
-				{'name': 'load', 'type': int, 'capture': 1},
-				{'name': 'miss-rate', 'type': float, 'capture': 2},
-				{'name': 'coverage', 'type': float, 'capture': 3},
-				{'name': 'hits-per-gb', 'type': float, 'capture': 4},
-				{'name': 'quality', 'type': int, 'capture': 5}
+				{'name': 'load', 'conversion': int, 'type': 'CAPTURE-1'},
+				{'name': 'miss-rate', 'conversion': float, 'type': 'CAPTURE-2'},
+				{'name': 'coverage', 'conversion': float, 'type': 'CAPTURE-3'},
+				{'name': 'hits-per-gb', 'conversion': float, 'type': 'CAPTURE-4'},
+				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-5'}
 			],
 			'tags': {'region': 'europe-africa'}
 		},
@@ -152,11 +164,11 @@ scraper_endpoints.append({
 				r'<td [^>]*>([^<]+)</td>',
 			],
 			'values': [
-				{'name': 'load', 'type': int, 'capture': 1},
-				{'name': 'miss-rate', 'type': float, 'capture': 2},
-				{'name': 'coverage', 'type': float, 'capture': 3},
-				{'name': 'hits-per-gb', 'type': float, 'capture': 4},
-				{'name': 'quality', 'type': int, 'capture': 5}
+				{'name': 'load', 'conversion': int, 'type': 'CAPTURE-1'},
+				{'name': 'miss-rate', 'conversion': float, 'type': 'CAPTURE-2'},
+				{'name': 'coverage', 'conversion': float, 'type': 'CAPTURE-3'},
+				{'name': 'hits-per-gb', 'conversion': float, 'type': 'CAPTURE-4'},
+				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-5'}
 			],
 			'tags': {'region': 'asia-oceania'}
 		},
@@ -174,11 +186,11 @@ scraper_endpoints.append({
 				r'<td [^>]*>([^<]+)</td>',
 			],
 			'values': [
-				{'name': 'load', 'type': int, 'capture': 1},
-				{'name': 'miss-rate', 'type': float, 'capture': 2},
-				{'name': 'coverage', 'type': float, 'capture': 3},
-				{'name': 'hits-per-gb', 'type': float, 'capture': 4},
-				{'name': 'quality', 'type': int, 'capture': 5}
+				{'name': 'load', 'conversion': int, 'type': 'CAPTURE-1'},
+				{'name': 'miss-rate', 'conversion': float, 'type': 'CAPTURE-2'},
+				{'name': 'coverage', 'conversion': float, 'type': 'CAPTURE-3'},
+				{'name': 'hits-per-gb', 'conversion': float, 'type': 'CAPTURE-4'},
+				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-5'}
 			],
 			'tags': {'region': 'global'}
 		},
@@ -189,9 +201,9 @@ scraper_endpoints.append({
 				r'<tr>\s*',
 				r'<td><a [^>]*>([^<]+)</a></td>\s*',
 				r'<td>([^<]+)</td>\s*',
-				r'<td [^>]*>([^<]+)</td>\s*',
+				r'<td [^>]*>Online</td>\s*',
 				r'<td>[^<]*</td>\s*',
-				r'<td>[^<]*</td>\s*',
+				r'<td>([^<]*)</td>\s*',
 				r'<td>([^<]+)</td>\s*',
 				r'<td [^>]*>[^<]+</td>\s*',
 				r'<td>[^<]*</td>\s*',
@@ -203,11 +215,33 @@ scraper_endpoints.append({
 				r'<td>([^ ]+) / day</td>\s*',
 			],
 			'values': [
-				{'name': 'online', 'type': lambda s: 1 if s == 'Online' else 0, 'capture': 3},
-				{'name': 'files', 'type': int, 'capture': 4},
-				{'name': 'trust', 'type': int, 'capture': 5},
-				{'name': 'quality', 'type': int, 'capture': 6},
-				{'name': 'hitrate', 'type': float, 'capture': 7}
+				{'name': 'online', 'conversion': lambda last: check_online(last, max_minutes=5), 'type': 'CAPTURE-3'},
+				{'name': 'files', 'conversion': int, 'type': 'CAPTURE-4'},
+				{'name': 'trust', 'conversion': int, 'type': 'CAPTURE-5'},
+				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-6'},
+				{'name': 'hitrate', 'conversion': float, 'type': 'CAPTURE-7'}
+			],
+			'tags': {
+				'host': 'CAPTURE-1',
+				'client-id': 'CAPTURE-2',
+			}
+		},
+		{
+			'dest': 'hath-client-net-stats',
+			'name': 'hath-health',
+			'regex': [
+				r'<tr>\s*',
+				r'<td><a [^>]*>([^<]+)</a></td>\s*',
+				r'<td>([^<]+)</td>\s*',
+				r'<td [^>]*>Offline</td>\s*',
+				r'<td>[^<]*</td>\s*',
+				r'<td>[^<]*</td>\s*',
+				r'<td>([^<]+)</td>\s*',
+				r'<td [^>]*>Not available when offline</td>\s*'
+			],
+			'values': [
+				{'name': 'online', 'conversion': False, 'type': 'VALUE'},
+				{'name': 'files', 'conversion': int, 'type': 'CAPTURE-3'}
 			],
 			'tags': {
 				'host': 'CAPTURE-1',

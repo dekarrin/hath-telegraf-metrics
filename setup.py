@@ -15,7 +15,7 @@ setup(
 	url='https://github.com/dekarrin/pytelegrafhttp',
 	author='Rebecca C. Nelson',
 	classifiers=[
-		'Development Status :: 3 - Alpha',
+		'Development Status :: 4 - Beta',
 		'Environment :: Console',
 		'Intended Audience :: Developers',
 		'License :: OSI Approved :: MIT License',
@@ -24,7 +24,7 @@ setup(
 	],
 	keywords='telegraf metrics http.py',
 	packages=['pytelegrafhttp'],
-	install_requires=['pytelegraf', 'requests'],
+	install_requires=['pytelegraf', 'requests', 'dateparser'],
 	python_requires='>=3.3',
 	extras_require={
 		'systemd-logs': ['systemd-python']
