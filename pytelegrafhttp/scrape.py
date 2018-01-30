@@ -547,18 +547,34 @@ def parse_config_metric_values(values, key_path):
 			raise util.ConfigException("metric value must contain 'name'", key)
 
 		try:
-			parsed_v['type'] = v['type']
+			v_type = v['type'].upper()
 		except KeyError:
 			raise util.ConfigException("metric value must contain 'type'", key)
-		if type(parsed_v['type']) is not type and not callable(parsed_v['type']):
-			raise util.ConfigException("metric value conversion type be a type or a callable", key + "['type']")
+		except AttributeError:
+			raise util.ConfigException("metric value must be of str type", key + "['type']")
 
 		try:
-			parsed_v['capture'] = int(v['capture'])
+			v_conv = v['conversion']
 		except KeyError:
-			raise util.ConfigException("metric value must contain 'capture'", key)
-		except ValueError:
-			raise util.ConfigException("metric value capture must be an int", key + "['capture']")
+			raise util.ConfigException("metric value must contain 'conversion'", key)
+
+		if re.match(r'CAPTURE-\d+', v_type) is not None:
+			cap, cap_group = v_type.split('-')
+			parsed_v['capture'] = int(cap_group)
+			parsed_v['type'] = 'capture'
+		elif v_type == 'VALUE':
+			parsed_v['type'] = 'const'
+		elif v_type == 'CUSTOM':
+			parsed_v['type'] = 'custom'
+		else:
+			msg = "metric value 'type' must be one of 'CUSTOM', 'VALUE', or 'CAPTURE-*' formats"
+			raise util.ConfigException(msg, key + "['type']")
+
+		if parsed_v['type'] != 'const' and type(v_conv) is not type and not callable(v_conv):
+			msg = "metric value conversion be a type or a callable when type is not 'VALUE'"
+			raise util.ConfigException(msg, key + "['conversion']")
+		parsed_v['conversion'] = v_conv
+
 		idx += 1
 		parsed_values.append(parsed_v)
 	return parsed_values
@@ -610,7 +626,7 @@ def parse_config_metric_tags(tags, key_path):
 		t_name = str(name)
 		key = key_path + "['" + t_name + "']"
 		try:
-			t_value = str(tags[t_name])
+			t_value = str(tags[t_name]).upper()
 		except KeyError:
 			raise util.ConfigException("metric tag keys must be str() type.", key)
 		if re.match(r'CAPTURE-\d+', t_value) is not None:
