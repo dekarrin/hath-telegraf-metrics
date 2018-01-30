@@ -239,9 +239,18 @@ class PageScraper(object):
 			metric_values = {}
 			for value_def in metric_value_definitions:
 				value_name = value_def['name']
-				value_group = value_def['capture']
 				value_type = value_def['type']
-				metric_values[value_name] = value_type(matcher.group(value_group))
+				value_conv = value_def['conversion']
+				if value_type == 'capture':
+					value_group = value_def['capture']
+					metric_values[value_name] = value_type(matcher.group(value_group))
+				elif value_type == 'custom':
+					metric_values[value_name] = value_type(matcher)
+				elif value_type == 'const':
+					metric_values[value_name] = value_conv
+				else:
+					# should be caught during config parsing, but double-check
+					raise ValueError("Bad metric value definition type: " + repr(value_type))
 
 			metric_tags = {}
 			for tag_name in metric_tag_definitions:
@@ -249,9 +258,11 @@ class PageScraper(object):
 				tag_type = tag_def['type']
 				if tag_type == 'capture':
 					tag_value = matcher.group(tag_def['value'])
-				else:
-					# assume all are const
+				elif tag_type == 'const':
 					tag_value = tag_def['value']
+				else:
+					# should be caught during config parsing, but double-check
+					raise ValueError("Bad metric tag definition type: " + repr(tag_type))
 				metric_tags[tag_name] = tag_value
 
 			bursts.append((dest_channel, {
