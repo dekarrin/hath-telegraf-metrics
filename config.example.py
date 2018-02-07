@@ -1,3 +1,5 @@
+from pytelegrafhttp.util import check_online
+
 # Global default install directory for all files. Note that each specific file / directory may override where it is
 # located, but by default they are all grouped together
 install_dir = '/etc/pytelegrafhttp'
@@ -89,17 +91,6 @@ scraper_telegraf_destinations = {
 		'global-tags': {}
 	}
 }
-
-
-# used for checking whether client is online based on last seen time.
-def check_online(last_seen_str, max_minutes):
-	from dateparser import parse
-	from datetime import datetime, timezone, timedelta
-	now = datetime.utcnow().replace(tzinfo=timezone.utc)
-	last_seen = parse(last_seen_str, languages=['en'], settings={'TIMEZONE': 'UTC', 'RETURN_AS_TIMEZONE_AWARE': True})
-	max_time = timedelta(minutes=max_minutes)
-	return now - last_seen > max_time
-
 
 scraper_endpoints = []
 scraper_endpoints.append({
@@ -219,7 +210,8 @@ scraper_endpoints.append({
 				{'name': 'files', 'conversion': int, 'type': 'CAPTURE-4'},
 				{'name': 'trust', 'conversion': int, 'type': 'CAPTURE-5'},
 				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-6'},
-				{'name': 'hitrate', 'conversion': float, 'type': 'CAPTURE-7'}
+				{'name': 'hitrate', 'conversion': float, 'type': 'CAPTURE-7'},
+				{'name': 'hathrate', 'conversion': float, 'type': 'CAPTURE-8'}
 			],
 			'tags': {
 				'host': 'CAPTURE-1',

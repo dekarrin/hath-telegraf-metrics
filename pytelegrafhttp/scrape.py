@@ -176,7 +176,7 @@ class PageScraper(object):
 				metrics = endpoint_data['metrics']
 				ts = now_ts(ms=True) * 1000000  # influx db has nano-second precision
 				status, endpoint_text = self._client.request('GET', endpoint.uri)
-				bursts = endpoint.scrape_metrics(metrics, endpoint_text)
+				bursts = endpoint.scrape_all_metrics(metrics, endpoint_text)
 				_log.info("Got metrics for " + endpoint.uri + "; sending...")
 				for b in bursts:
 					self._send_metric_burst(b['channel'], ts, b[1]['metric'], b[1]['values'], b[1]['tags'])
