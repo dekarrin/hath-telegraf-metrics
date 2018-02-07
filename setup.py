@@ -11,6 +11,7 @@ setup(
 	name='pytelegrafhttp',
 	version='0.1.0',
 	description='Scrape HTTP pages for metrics and feed them into Telegraf',
+	test_suite='pytelegrafhttp.tests.discover',
 	long_description=long_description,
 	url='https://github.com/dekarrin/pytelegrafhttp',
 	author='Rebecca C. Nelson',

@@ -10,7 +10,6 @@ import random
 import urllib.parse
 import logging
 from .clock import now_ts
-import pprint
 import pickle
 import html
 from telegraf.client import TelegrafClient
