@@ -3,6 +3,23 @@ Contains utility classes.
 """
 import re
 
+
+class VerificationError(Exception):
+	"""
+	Raise when a page did not match the expected content.
+	"""
+
+	def __init__(self, msg, content):
+		"""
+		Creates a new VerificationError.
+
+		:param msg: The messages.
+		:param content: The content that did not match.
+		"""
+		self.content = content
+		super().__init__(msg)
+
+
 class ConfigException(Exception):
 	"""Raised when there is a problem with a value in the configuration."""
 

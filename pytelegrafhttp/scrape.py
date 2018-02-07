@@ -2,6 +2,7 @@
 Contains scraper class for system.
 """
 from .clock import TickClock
+from .endpoint import Endpoint
 from . import util, http
 import base64
 import re
@@ -78,22 +79,6 @@ class AuthError(Exception):
 
 		:param msg: The message.
 		"""
-		super().__init__(msg)
-
-
-class VerificationError(Exception):
-	"""
-	Raise when a page did not match the expected content.
-	"""
-
-	def __init__(self, msg, content):
-		"""
-		Creates a new VerificationError.
-
-		:param msg: The messages.
-		:param content: The content that did not match.
-		"""
-		self.content = content
 		super().__init__(msg)
 
 
@@ -185,8 +170,17 @@ class PageScraper(object):
 
 		for endpoint_data in self._endpoints:
 			try:
-				self._scrape_endpoint(endpoint_data)
-			except VerificationError as e:
+				uri = endpoint_data['endpoint']
+				verify = endpoint_data['verify-pattern']
+				endpoint = Endpoint(uri, verify)
+				metrics = endpoint_data['metrics']
+				ts = now_ts(ms=True) * 1000000  # influx db has nano-second precision
+				status, endpoint_text = self._client.request('GET', endpoint.uri)
+				bursts = endpoint.scrape_metrics(metrics, endpoint_text)
+				_log.info("Got metrics for " + endpoint.uri + "; sending...")
+				for b in bursts:
+					self._send_metric_burst(b['channel'], ts, b[1]['metric'], b[1]['values'], b[1]['tags'])
+			except util.VerificationError as e:
 				if self._bot_kicked_pattern.search(e.content) is not None:
 					raise BotKickedError("automated client was kicked/banned from the server: " + e.content)
 				elif self._logged_out_pattern.search(e.content) is not None:
@@ -207,75 +201,6 @@ class PageScraper(object):
 		if self._antiflood:
 			secs = random.uniform(2.5, 6.5)
 			time.sleep(secs)
-
-	def _scrape_endpoint(self, endpoint_data):
-		endpoint = endpoint_data['endpoint']
-		verify_pattern = endpoint_data['verify-pattern']
-		metrics = endpoint_data['metrics']
-
-		ts = now_ts(ms=True) * 1000000  # influx db has nano-second precision
-
-		status, endpoint_text = self._client.request('GET', endpoint)
-		if verify_pattern.search(endpoint_text) is None:
-			raise VerificationError("endpoint did not match expected content", endpoint_text)
-		idx = 0
-		bursts = []
-		for m in metrics:
-			dest_channel = m['dest']
-			metric_name = m['name']
-			pattern = m['regex']
-			metric_value_definitions = m['values']
-			metric_tag_definitions = m['tags']
-
-			if pattern.search(endpoint_text) is None:
-				warning_text = "endpoint '" + endpoint + "', metric " + str(idx) + " (" + metric_name + ")"
-				warning_text += " could not be found. Skipping for this unit of time"
-				_log.warning(warning_text)
-				continue
-
-			# find all matches
-			matchers = pattern.finditer(endpoint_text)
-			for matcher in matchers:
-				# build the values from the matched items
-				metric_values = {}
-				for value_def in metric_value_definitions:
-					value_name = value_def['name']
-					value_type = value_def['type']
-					value_conv = value_def['conversion']
-					if value_type == 'capture':
-						value_group = value_def['capture']
-						metric_values[value_name] = value_type(matcher.group(value_group))
-					elif value_type == 'custom':
-						metric_values[value_name] = value_type(matcher)
-					elif value_type == 'const':
-						metric_values[value_name] = value_conv
-					else:
-						# should be caught during config parsing, but double-check
-						raise ValueError("Bad metric value definition type: " + repr(value_type))
-
-				metric_tags = {}
-				for tag_name in metric_tag_definitions:
-					tag_def = metric_tag_definitions[tag_name]
-					tag_type = tag_def['type']
-					if tag_type == 'capture':
-						tag_value = matcher.group(tag_def['value'])
-					elif tag_type == 'const':
-						tag_value = tag_def['value']
-					else:
-						# should be caught during config parsing, but double-check
-						raise ValueError("Bad metric tag definition type: " + repr(tag_type))
-					metric_tags[tag_name] = tag_value
-
-				bursts.append((dest_channel, {
-					'metric': metric_name,
-					'values': metric_values,
-					'tags': metric_tags
-				}))
-			idx += 1
-
-		_log.info("Got metrics for " + endpoint + "; sending...")
-		for b in bursts:
-			self._send_metric_burst(b[0], ts, b[1]['metric'], b[1]['values'], b[1]['tags'])
 
 	def _send_metric_burst(self, channel, timestamp, metric, values, tags):
 		if channel not in self._telegraf_clients:
