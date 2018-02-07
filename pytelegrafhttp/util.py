@@ -40,7 +40,7 @@ def check_online(last_seen_str, max_minutes):
 	now = datetime.utcnow().replace(tzinfo=timezone.utc)
 	last_seen = parse(last_seen_str, languages=['en'], settings={'TIMEZONE': 'UTC', 'RETURN_AS_TIMEZONE_AWARE': True})
 	max_time = timedelta(minutes=max_minutes)
-	return now - last_seen > max_time
+	return now - last_seen <= max_time
 
 
 def get_config_regex(conf, var_name):

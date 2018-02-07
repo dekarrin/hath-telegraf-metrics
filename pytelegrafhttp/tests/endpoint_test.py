@@ -4,6 +4,7 @@ from pytelegrafhttp.clock import now
 from pytelegrafhttp import scrape
 from unittest import TestCase
 import re
+from datetime import timedelta
 
 
 class EndpointTest(TestCase):
@@ -14,13 +15,14 @@ class EndpointTest(TestCase):
 	def test_single_client(self):
 		text = _create_body_text(
 			dict(
-				id=12345,
+				id='12345',
 				name='flandre',
 				files=61234,
 				trust=456,
 				quality=3953,
 				hitrate=2.6,
-				hathrate=1
+				hathrate=1,
+				online=True
 			)
 		)
 		metric = self.endpoint.scrape_metric(_client_stats_metric, text)[0]
@@ -36,7 +38,48 @@ class EndpointTest(TestCase):
 
 		# tags
 		self.assertEqual(t['host'], 'flandre')
-		self.assertEqual(t['client-id'], 12345)
+		self.assertEqual(t['client-id'], '12345')
+
+	def test_client_toolong_not_connected(self):
+		now_time = now()
+		ts = now_time - timedelta(minutes=6)
+		if ts.day != now_time.day:
+			time_str = "Yesterday, "
+		else:
+			time_str = "Today, "
+		time_str += str(ts.hour) + ':' + str(ts.minute)
+		text = _create_body_text(
+			dict(
+				online=True,
+				last_seen=time_str
+			)
+		)
+
+		v = self.endpoint.scrape_metric(_client_stats_metric, text)[0]['values']
+
+		self.assertFalse(v['online'])
+
+	def test_client_offline(self):
+		text = _create_body_text(
+			dict(
+				id='12345',
+				name='flandre',
+				files=61234,
+				trust=456,
+				quality=3953,
+				hitrate=2.6,
+				hathrate=1,
+				online=False
+			)
+		)
+
+		v = self.endpoint.scrape_metric(_offline_client_stats_metric, text)[0]['values']
+
+		self.assertNotIn('trust', v)
+		self.assertNotIn('quality', v)
+		self.assertNotIn('hitrate', v)
+		self.assertNotIn('hathrate', v)
+		self.assertEqual(v['files'], 61234)
 
 
 _network_stats_metric = scrape.parse_config_metrics([{
@@ -60,7 +103,7 @@ _network_stats_metric = scrape.parse_config_metrics([{
 		{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-5'}
 	],
 	'tags': {'region': 'asia-oceania'}
-}], '')
+}], '')[0]
 
 _client_stats_metric = scrape.parse_config_metrics([{
 	'dest': 'hath-client-net-stats',
@@ -84,7 +127,7 @@ _client_stats_metric = scrape.parse_config_metrics([{
 	],
 	'values': [
 		{'name': 'online', 'conversion': lambda last: check_online(last, max_minutes=5), 'type': 'CAPTURE-3'},
-		{'name': 'files', 'conversion': int, 'type': 'CAPTURE-4'},
+		{'name': 'files', 'conversion': lambda x: int(x.replace(',', '')), 'type': 'CAPTURE-4'},
 		{'name': 'trust', 'conversion': int, 'type': 'CAPTURE-5'},
 		{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-6'},
 		{'name': 'hitrate', 'conversion': float, 'type': 'CAPTURE-7'},
@@ -111,13 +154,13 @@ _offline_client_stats_metric = scrape.parse_config_metrics([{
 	],
 	'values': [
 		{'name': 'online', 'conversion': False, 'type': 'VALUE'},
-		{'name': 'files', 'conversion': int, 'type': 'CAPTURE-3'}
+		{'name': 'files', 'conversion': lambda x: int(x.replace(',', '')), 'type': 'CAPTURE-3'}
 	],
 	'tags': {
 		'host': 'CAPTURE-1',
 		'client-id': 'CAPTURE-2',
 	}
-}], '')
+}], '')[0]
 
 
 def _create_network_text(**kwargs):
@@ -153,7 +196,7 @@ def _create_network_text(**kwargs):
 
 
 def _create_client_text(**kwargs):
-	cid = kwargs.get('id', 12345)
+	cid = kwargs.get('id', '12345')
 	name = kwargs.get('name', 'flandre')
 	online = kwargs.get('online', True)
 	online_color = 'green' if online else 'red'
@@ -174,8 +217,8 @@ def _create_client_text(**kwargs):
 	country = kwargs.get('country', 'United States')
 	fmt = '''
 <tr>
-<td><a href="https://e-fancomics.org/fancomicsathome.php?cid={id:d}&amp;act=settings">{name:s}</a></td>
-<td>{id:d}</td>
+<td><a href="https://e-fancomics.org/fancomicsathome.php?cid={id:s}&amp;act=settings">{name:s}</a></td>
+<td>{id:s}</td>
 <td style="font-weight:bold; color:{online_color:s}">{online:s}</td>
 <td>{created:s}</td>
 <td>{last_seen:s}</td>

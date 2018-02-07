@@ -207,7 +207,7 @@ scraper_endpoints.append({
 			],
 			'values': [
 				{'name': 'online', 'conversion': lambda last: check_online(last, max_minutes=5), 'type': 'CAPTURE-3'},
-				{'name': 'files', 'conversion': int, 'type': 'CAPTURE-4'},
+				{'name': 'files', 'conversion': lambda x: int(x.replace(',', '')), 'type': 'CAPTURE-4'},
 				{'name': 'trust', 'conversion': int, 'type': 'CAPTURE-5'},
 				{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-6'},
 				{'name': 'hitrate', 'conversion': float, 'type': 'CAPTURE-7'},
@@ -233,7 +233,7 @@ scraper_endpoints.append({
 			],
 			'values': [
 				{'name': 'online', 'conversion': False, 'type': 'VALUE'},
-				{'name': 'files', 'conversion': int, 'type': 'CAPTURE-3'}
+				{'name': 'files', 'conversion': lambda x: int(x.replace(',', '')), 'type': 'CAPTURE-3'}
 			],
 			'tags': {
 				'host': 'CAPTURE-1',

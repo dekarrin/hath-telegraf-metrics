@@ -46,9 +46,11 @@ class Endpoint(object):
 				value_conv = value_def['conversion']
 				if value_type == 'capture':
 					value_group = value_def['capture']
-					metric_values[value_name] = value_type(matcher.group(value_group))
+					val = matcher.group(value_group)
+					metric_values[value_name] = value_conv(val)
 				elif value_type == 'custom':
-					metric_values[value_name] = value_type(matcher)
+
+					metric_values[value_name] = value_conv(matcher)
 				elif value_type == 'const':
 					metric_values[value_name] = value_conv
 				else:
