@@ -81,12 +81,37 @@ class EndpointTest(TestCase):
 		self.assertNotIn('hathrate', v)
 		self.assertEqual(v['files'], 61234)
 
+	def test_regions(self):
+		text = _create_body_text(regions=[
+			dict(
+				region='Asia and Nearby Regions',
+				load_mb=612,
+				miss_rate=2.45,
+				coverage=14.5,
+				hits_per_gb=0.2942,
+				quality=4695
+			)
+		])
+
+		metric = self.endpoint.scrape_metric(_network_stats_metric, text)[0]
+		v, t = metric['values'], metric['tags']
+
+		# values
+		self.assertEqual(v['load'], 612)
+		self.assertEqual(v['miss-rate'], 2.45)
+		self.assertEqual(v['coverage'], 14.5)
+		self.assertEqual(v['hits-per-gb'], 0.2942)
+		self.assertEqual(v['quality'], 4695)
+
+		# tags
+		self.assertEqual(t['region'], 'Asia and Nearby Regions')
+
 
 _network_stats_metric = scrape.parse_config_metrics([{
 	'dest': 'hath-net',
 	'name': 'hath-net',
 	'regex': [
-		r'<td>Asia and Oceania</td>\s*',
+		r'<td>([^<]*)</td>\s*',
 		r'<td [^>]*>[^ ]+ Gbit/s</td>\s*',
 		r'<td [^>]*>=</td>\s*',
 		r'<td [^>]*>([^ ]+) MB/s</td>\s*',
@@ -96,13 +121,13 @@ _network_stats_metric = scrape.parse_config_metrics([{
 		r'<td [^>]*>([^<]+)</td>',
 	],
 	'values': [
-		{'name': 'load', 'conversion': int, 'type': 'CAPTURE-1'},
-		{'name': 'miss-rate', 'conversion': float, 'type': 'CAPTURE-2'},
-		{'name': 'coverage', 'conversion': float, 'type': 'CAPTURE-3'},
-		{'name': 'hits-per-gb', 'conversion': float, 'type': 'CAPTURE-4'},
-		{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-5'}
+		{'name': 'load', 'conversion': int, 'type': 'CAPTURE-2'},
+		{'name': 'miss-rate', 'conversion': float, 'type': 'CAPTURE-3'},
+		{'name': 'coverage', 'conversion': float, 'type': 'CAPTURE-4'},
+		{'name': 'hits-per-gb', 'conversion': float, 'type': 'CAPTURE-5'},
+		{'name': 'quality', 'conversion': int, 'type': 'CAPTURE-6'}
 	],
-	'tags': {'region': 'asia-oceania'}
+	'tags': {'region': 'CAPTURE-1'}
 }], '')[0]
 
 _client_stats_metric = scrape.parse_config_metrics([{
