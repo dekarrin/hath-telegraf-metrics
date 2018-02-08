@@ -563,10 +563,10 @@ def parse_config_metric_tags(tags, key_path):
 		t_name = str(name)
 		key = key_path + "['" + t_name + "']"
 		try:
-			t_value = str(tags[t_name]).upper()
+			t_value = str(tags[t_name])
 		except KeyError:
 			raise util.ConfigException("metric tag keys must be str() type.", key)
-		if re.match(r'CAPTURE-\d+', t_value) is not None:
+		if re.match(r'CAPTURE-\d+', t_value.upper()) is not None:
 			cap, cap_group = t_value.split('-')
 			parsed_tags[t_name] = {
 				'type': 'capture',
