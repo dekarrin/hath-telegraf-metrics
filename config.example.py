@@ -232,7 +232,7 @@ scraper_endpoints.append({
 				r'<td [^>]*>Not available when offline</td>\s*'
 			],
 			'values': [
-				{'name': 'online', 'conversion': False, 'type': 'VALUE'},
+				{'name': 'online', 'conversion': 0, 'type': 'VALUE'},
 				{'name': 'files', 'conversion': lambda x: int(x.replace(',', '')), 'type': 'CAPTURE-3'}
 			],
 			'tags': {
