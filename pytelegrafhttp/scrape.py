@@ -179,7 +179,7 @@ class PageScraper(object):
 				bursts = endpoint.scrape_all_metrics(metrics, endpoint_text)
 				_log.info("Got metrics for " + endpoint.uri + "; sending...")
 				for b in bursts:
-					self._send_metric_burst(b['channel'], ts, b[1]['metric'], b[1]['values'], b[1]['tags'])
+					self._send_metric_burst(b['channel'], ts, b['metric'], b['values'], b['tags'])
 			except util.VerificationError as e:
 				if self._bot_kicked_pattern.search(e.content) is not None:
 					raise BotKickedError("automated client was kicked/banned from the server: " + e.content)
