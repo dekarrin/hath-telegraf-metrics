@@ -34,13 +34,14 @@ class ConfigException(Exception):
 
 
 # used for checking whether client is online based on last seen time.
+# returned value is given as a number.
 def check_online(last_seen_str, max_minutes):
 	from dateparser import parse
 	from datetime import datetime, timezone, timedelta
 	now = datetime.utcnow().replace(tzinfo=timezone.utc)
 	last_seen = parse(last_seen_str, languages=['en'], settings={'TIMEZONE': 'UTC', 'RETURN_AS_TIMEZONE_AWARE': True})
 	max_time = timedelta(minutes=max_minutes)
-	return now - last_seen <= max_time
+	return 1 if now - last_seen <= max_time else 0
 
 
 def get_config_regex(conf, var_name):

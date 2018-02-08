@@ -29,7 +29,7 @@ class EndpointTest(TestCase):
 		v, t = metric['values'], metric['tags']
 
 		# values
-		self.assertTrue(v['online'])
+		self.assertEqual(v['online'], 1)
 		self.assertEqual(v['files'], 61234)
 		self.assertEqual(v['trust'], 456)
 		self.assertEqual(v['quality'], 3953)
@@ -57,7 +57,7 @@ class EndpointTest(TestCase):
 
 		v = self.endpoint.scrape_metric(_client_stats_metric, text)[0]['values']
 
-		self.assertFalse(v['online'])
+		self.assertEqual(v['online'], 0)
 
 	def test_client_offline(self):
 		text = _create_body_text(
