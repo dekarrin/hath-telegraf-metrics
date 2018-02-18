@@ -40,7 +40,7 @@ if ! [ -d "$install_dir/logs" ]
 then
 	mkdir "$install_dir/logs" || { echo "Could not create logs directory" >&2; exit ${E_ETC};}
 	chown pytelegrafhttp:pytelegrafhttp "$install_dir/logs" || { echo "Could not set owner of logs directory" >&2; exit ${E_ETC};}
-	chmod 775 "$install_dir/logs" || { echo "Could not set mode of logs directory" >&2; exit ${E_ETC};}
+	chmod 770 "$install_dir/logs" || { echo "Could not set mode of logs directory" >&2; exit ${E_ETC};}
 fi
 
 # create daemon directory
