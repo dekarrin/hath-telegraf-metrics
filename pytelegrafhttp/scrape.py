@@ -119,11 +119,15 @@ class PageScraper(object):
 		cookies_file = util.get_config_str(conf, 'env_cookies_file')
 		state_file = util.get_config_str(conf, 'env_state_file')
 		save_freq = util.get_config_int(conf, 'time_save_frequency')
+		full_response_logging = util.get_config_bool(conf, 'log_full_http_responses')
+		full_request_logging = util.get_config_bool(conf, 'log_full_http_requests')
 
 		self._logged_out_pattern = logged_out_pattern
 		self._bot_kicked_pattern = bot_kicked_pattern
 		self._client.ssl = ssl
 		self._client.host = host
+		self._client.log_full_response = full_response_logging
+		self._client.log_full_request = full_request_logging
 		self._user = user
 		self._password = base64.b85encode(passwd.encode('utf-8'))
 		self._login_steps = login_steps

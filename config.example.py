@@ -55,6 +55,15 @@ log_file_max_size = "5 Mbs"
 # oldest one to be deleted.
 log_file_keep_count = 4
 
+# Whether entire HTTP request should be in logged output. If True, headers, body, and query string are included. If
+# False, only the host and the URI endpoint are included in logged output.  WARNING: If set to True, sensitive data
+# could be included in logged output, such as passwords or session IDs.
+log_full_http_requests = False
+
+# Whether entire HTTP response should be in response. If True, headers and body are included. If False, only the HTTP
+# status code is included in logged output.
+log_full_http_responses = False
+
 # Additional system log to use. Adding one of these values requires that the associated python module is installed on
 # the host system separately from this application.
 #

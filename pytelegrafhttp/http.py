@@ -20,18 +20,22 @@ _default_http_headers = {
 }
 
 
-def _log_http_request(req, uri, host, auth):
-	query_text = '?' + req.path_url.split('?', 1)[1] if '?' in req.path_url else ''
+def _log_http_request(req, uri, host, auth, full):
+	query_text = ''
+	if full and '?' in req.path_url:
+		query_text = '?' + req.path_url.split('?', 1)[1]
 	auth_text = "authenticated " if auth else ""
 	_log.debug("Sending " + auth_text + "HTTP " + req.method.upper() + " " + uri + query_text + " to " + host)
-	_log.debug("Headers: " + str(req.headers))
-	_log.debug("Body: " + str(req.body))
+	if full:
+		_log.debug("Headers: " + str(req.headers))
+		_log.debug("Body: " + str(req.body))
 
 
-def _log_http_response(resp):
+def _log_http_response(resp, full):
 	_log.debug("Received response: HTTP " + str(resp.status_code))
-	_log.debug("Headers: " + str(resp.headers))
-	_log.debug("Body: " + str(resp.content))
+	if full:
+		_log.debug("Headers: " + str(resp.headers))
+		_log.debug("Body: " + str(resp.content))
 
 
 class AsyncHTTPError(Exception):
@@ -60,6 +64,8 @@ class HttpAgent(object):
 			response_payload='json',
 			ignored_errors=None,
 			ssl=False,
+			log_full_request=True,
+			log_full_response=True,
 			auth_func=lambda x: x.prepare()
 	):
 		"""
@@ -82,6 +88,14 @@ class HttpAgent(object):
 		:type ssl: ``bool``
 		:param ssl: Whether SSL/TLS should be assumed to be the method of connecting for all requests, unless
 		otherwise stated.
+		:type log_full_request: ``bool``
+		:param log_full_request: Whether to log an entire HTTP request (including all headers and body). If False, only
+		the host and method will be logged. If True, the entire response will be logged, including body and headers in
+		plaintext.
+		:type log_full_response: ``bool``
+		:param log_full_response: Whether to log an entire HTTP response (including all headers and body). If False,
+		only the host and response code will be logged. If True, the entire response will be logged, including body and
+		headers in plaintext.
 		:type auth_func: ``(requests.Request) -> requests.PreparedRequest``
 		:param auth_func: Adds authentication info to a request. Should not be used for plain HTML form authorization,
 		but rather for methods inherent to HTTP, e.g. basic auth, bearer tokens, or signed digest.
@@ -101,6 +115,8 @@ class HttpAgent(object):
 		self._async_executor = concurrent.futures.ThreadPoolExecutor(max_workers=100)
 		self._async_transforms = []
 		self._auth_func = auth_func
+		self._log_full_request = log_full_request
+		self._log_full_response = log_full_response
 
 	def start_new_session(self):
 		if self._session is not None:
@@ -181,7 +197,7 @@ class HttpAgent(object):
 		for req, uri, host, auth, decode, ignored in self._async_http_requests:
 			if host is None:
 				host = self._host
-			_log_http_request(req, uri, host, auth)
+			_log_http_request(req, uri, host, auth, self.log_full_request)
 			f = self._async_executor.submit(session.send, req)
 			# mini data-structure, Tuple[done_yet, future]
 			futures.append((False, f, decode, ignored))
@@ -195,7 +211,7 @@ class HttpAgent(object):
 				if not done_now:
 					if f[1].done():
 						r = f[1].result()
-						_log_http_response(r)
+						_log_http_response(r, self.log_full_response)
 						responses[idx] = (r, f[2], f[3])
 						done_now = True
 				next_futures.append((done_now, f[1], f[2], f[3]))
@@ -269,14 +285,14 @@ class HttpAgent(object):
 		prepared = self._prepare_http_request(method, uri, host, query, payload, auth, encode_payload, use_ssl)
 		if host is None:
 			host = self._host
-		_log_http_request(prepared, uri, host, auth)
+		_log_http_request(prepared, uri, host, auth, self.log_full_request)
 
 		if self._session is None:
 			self.start_new_session()
 		sess = self._session
 
 		resp = sess.send(prepared)
-		_log_http_response(resp)
+		_log_http_response(resp, self.log_full_response)
 
 		if resp.status_code not in ignored_errors:
 			resp.raise_for_status()  # raise if an error occured (will only raise if the status code is 4XX or 5XX)
@@ -305,7 +321,6 @@ class HttpAgent(object):
 		cookies = self._session.cookies
 
 		_log.debug('writing out cookies...')
-		_log.debug(repr(cookies))
 
 		with open(filename, 'wb') as f:
 			pickle.dump(cookies, f)
@@ -325,6 +340,34 @@ class HttpAgent(object):
 		self._session.cookies.update(cookies)
 
 	@property
+	def log_full_request(self):
+		"""
+		:rtype: bool
+		"""
+		return self._log_full_request
+
+	@log_full_request.setter
+	def log_full_request(self, value):
+		"""
+		:type value: bool
+		"""
+		self._log_full_request = value
+
+	@property
+	def log_full_response(self):
+		"""
+		:rtype: bool
+		"""
+		return self._log_full_response
+
+	@log_full_response.setter
+	def log_full_response(self, value):
+		"""
+		:type value: bool
+		"""
+		self._log_full_response = value
+
+	@property
 	def ssl(self):
 		"""
 		:rtype: bool
@@ -336,7 +379,6 @@ class HttpAgent(object):
 		"""
 		:type value: bool
 		"""
-		# check for the most common of schemes; all others are on the user.
 		self._use_ssl = value
 
 	@property
