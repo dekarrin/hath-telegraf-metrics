@@ -60,8 +60,8 @@ chown pytelegrafhttp:pytelegrafhttp "$install_dir/config.py" || { echo "Could no
 chmod 770 "$install_dir/config.py" || { echo "Could not set mode of config.py" >&2; exit ${E_ETC};}
 
 # create systemd service file
-cp scripts/pytelegrafhttp.service "$install_dir/pytelegrafhttp.service" || { echo "Could not create systemd unit file" >&2; exit ${E_ETC};}
-ln -s "$install_dir/pytelegrafhttp.service" /etc/systemd/system/pytelegrafhttp.service || { echo "Could not create unit file symlink" >&2; exit ${E_ETC};}
+cp scripts/pytelegrafhttp.service /etc/systemd/system/pytelegrafhttp.service || { echo "Could not create systemd unit file" >&2; exit ${E_ETC};}
+systemctl enable pytelegrafhttp || { echo "Could not create unit file symlink; service may fail to auto-start on boot" >&2; exit ${E_ETC};}
 
 echo "installation completion"
 echo "main config located in '$install_dir/config.py'"
